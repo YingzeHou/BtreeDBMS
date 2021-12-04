@@ -2,7 +2,8 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
 #include "index_scan_completed_exception.h"
@@ -13,10 +14,10 @@
 namespace badgerdb {
 
 IndexScanCompletedException::IndexScanCompletedException()
-    : BadgerDbException(""){
+    : BadgerDbException("") {
   std::stringstream ss;
   ss << "Index Scan Completed";
   message_.assign(ss.str());
 }
 
-}
+}  // namespace badgerdb

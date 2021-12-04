@@ -2,7 +2,8 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
 #include "insufficient_space_exception.h"
@@ -26,4 +27,4 @@ InsufficientSpaceException::InsufficientSpaceException(
   message_.assign(ss.str());
 }
 
-}
+}  // namespace badgerdb

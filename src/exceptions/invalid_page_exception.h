@@ -2,7 +2,8 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
 #pragma once
@@ -17,7 +18,7 @@ namespace badgerdb {
 /**
  * @brief An exception that is thrown when an attempt is made to access an
  *        invalid page in a file.
- * 
+ *
  * Pages are considered invalid if they have not yet been allocated (an ID off
  * the end of the file) or if they have been deleted and not yet re-allocated.
  */
@@ -30,8 +31,7 @@ class InvalidPageException : public BadgerDbException {
    * @param requested_number  Requested page number.
    * @param file              Name of file that request was made to.
    */
-  InvalidPageException(const PageId requested_number,
-                       const std::string& file);
+  InvalidPageException(const PageId requested_number, const std::string& file);
 
   /**
    * Destroys the exception.  Does nothing special; just included to make the
@@ -61,4 +61,4 @@ class InvalidPageException : public BadgerDbException {
   const std::string filename_;
 };
 
-}
+}  // namespace badgerdb

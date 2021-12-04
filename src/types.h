@@ -2,7 +2,8 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
 #pragma once
@@ -38,10 +39,10 @@ struct RecordId {
    */
   SlotId slot_number;
 
-	/**
-	 * Padding to make the size of RecordId 8 bytes
-	 */
-	SlotId padding;
+  /**
+   * Padding to make the size of RecordId 8 bytes
+   */
+  SlotId padding;
 
   /**
    * Returns true if this record ID refers to the same record as the given ID.
@@ -54,7 +55,8 @@ struct RecordId {
   }
 
   /**
-   * Returns true if this record ID is different from the record as the given ID.
+   * Returns true if this record ID is different from the record as the given
+   * ID.
    *
    * @param rhs   Record ID to compare against.
    * @return  Whether the other ID is different from record as this one.
@@ -64,4 +66,4 @@ struct RecordId {
   }
 };
 
-}
+}  // namespace badgerdb

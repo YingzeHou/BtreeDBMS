@@ -2,7 +2,8 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
 #pragma once
@@ -28,8 +29,7 @@ class InsufficientSpaceException : public BadgerDbException {
    * @param requested   Space requested in bytes.
    * @param available   Space available in bytes.
    */
-  InsufficientSpaceException(const PageId page_num,
-                             const std::size_t requested,
+  InsufficientSpaceException(const PageId page_num, const std::size_t requested,
                              const std::size_t available);
 
   /**
@@ -64,4 +64,4 @@ class InsufficientSpaceException : public BadgerDbException {
   const std::size_t space_available_;
 };
 
-}
+}  // namespace badgerdb

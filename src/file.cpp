@@ -2,17 +2,18 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
 #include "file.h"
 
+#include <cassert>
+#include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <string>
-#include <cstdio>
-#include <cassert>
 
 #include "exceptions/file_exists_exception.h"
 #include "exceptions/file_not_found_exception.h"
@@ -44,20 +45,16 @@ bool File::isOpen(const std::string& filename) {
 }
 
 bool File::exists(const std::string& filename) {
-	std::fstream file(filename);
-	if(file)
-	{
-		file.close();
-		return true;
-	}
+  std::fstream file(filename);
+  if (file) {
+    file.close();
+    return true;
+  }
 
-	return false;
+  return false;
 }
 
-File::~File() {
-  close();
-}
-
+File::~File() { close(); }
 
 PageId File::getFirstPageNo() {
   const FileHeader& header = readHeader();
@@ -76,7 +73,8 @@ File::File(const std::string& name, const bool create_new) : filename_(name) {
 }
 
 void File::openIfNeeded(const bool create_new) {
-  if (open_counts_.find(filename_) != open_counts_.end()) {	//exists an entry already
+  if (open_counts_.find(filename_) !=
+      open_counts_.end()) {  // exists an entry already
     ++open_counts_[filename_];
     stream_ = open_streams_[filename_];
   } else {
@@ -103,11 +101,10 @@ void File::openIfNeeded(const bool create_new) {
 }
 
 void File::close() {
-	if(open_counts_[filename_] > 0)
-  	--open_counts_[filename_];
+  if (open_counts_[filename_] > 0) --open_counts_[filename_];
 
   stream_.reset();
-	assert(open_counts_[filename_] >= 0);
+  assert(open_counts_[filename_] >= 0);
 
   if (open_counts_[filename_] == 0) {
     open_streams_.erase(filename_);
@@ -128,10 +125,6 @@ void File::writeHeader(const FileHeader& header) {
   stream_->flush();
 }
 
-
-
-
-
 PageFile PageFile::create(const std::string& filename) {
   return PageFile(filename, true /* create_new */);
 }
@@ -141,35 +134,30 @@ PageFile PageFile::open(const std::string& filename) {
 }
 
 PageFile::PageFile(const std::string& name, const bool create_new)
-: File(name, create_new)
-{
-}
+    : File(name, create_new) {}
 
-PageFile::~PageFile() {
-}
+PageFile::~PageFile() {}
 
 PageFile::PageFile(const PageFile& other)
-: File(other.filename_, false /* create_new */)
-{
-}
+    : File(other.filename_, false /* create_new */) {}
 
 PageFile& PageFile::operator=(const PageFile& rhs) {
   // This accounts for self-assignment and assignment of a File object for the
   // same file.
-  close();	//close my file and associate me with the new one
+  close();  // close my file and associate me with the new one
   filename_ = rhs.filename_;
   openIfNeeded(false /* create_new */);
   return *this;
 }
 
-Page PageFile::allocatePage(PageId &new_page_number) {
+Page PageFile::allocatePage(PageId& new_page_number) {
   FileHeader header = readHeader();
   Page new_page;
   Page existing_page;
   if (header.num_free_pages > 0) {
     new_page = readPage(header.first_free_page, true /* allow_free */);
     new_page.set_page_number(header.first_free_page);
-		new_page_number = new_page.page_number();
+    new_page_number = new_page.page_number();
     header.first_free_page = new_page.next_page_number();
     --header.num_free_pages;
 
@@ -199,18 +187,13 @@ Page PageFile::allocatePage(PageId &new_page_number) {
 
     assert((header.num_free_pages == 0) ==
            (header.first_free_page == Page::INVALID_NUMBER));
-  }
-	else
-	{
+  } else {
     new_page.set_page_number(header.num_pages);
-		new_page_number = new_page.page_number();
+    new_page_number = new_page.page_number();
 
-    if (header.first_used_page == Page::INVALID_NUMBER)
-		{
+    if (header.first_used_page == Page::INVALID_NUMBER) {
       header.first_used_page = new_page.page_number();
-    }
-		else
-		{
+    } else {
       // If we have pages allocated, we need to add the new page to the tail
       // of the linked list.
       for (FileIterator iter = begin(); iter != end(); ++iter) {
@@ -228,7 +211,8 @@ Page PageFile::allocatePage(PageId &new_page_number) {
   if (existing_page.page_number() != Page::INVALID_NUMBER) {
     // If we updated an existing page by inserting the new page into the
     // used list, we need to write it out.
-    writePage(existing_page.page_number(), existing_page.header_, existing_page);
+    writePage(existing_page.page_number(), existing_page.header_,
+              existing_page);
   }
   writeHeader(header);
 
@@ -238,11 +222,10 @@ Page PageFile::allocatePage(PageId &new_page_number) {
 Page PageFile::readPage(const PageId page_number) const {
   FileHeader header = readHeader();
 
-	if (page_number >= header.num_pages)
-	{
-		throw InvalidPageException(page_number, filename_);
-	}
-	return readPage(page_number, false /* allow_free */);
+  if (page_number >= header.num_pages) {
+    throw InvalidPageException(page_number, filename_);
+  }
+  return readPage(page_number, false /* allow_free */);
 }
 
 Page PageFile::readPage(const PageId page_number, const bool allow_free) const {
@@ -258,19 +241,18 @@ Page PageFile::readPage(const PageId page_number, const bool allow_free) const {
 }
 
 void PageFile::writePage(const PageId new_page_number, const Page& new_page) {
-	PageHeader header = readPageHeader(new_page_number);
-	if (header.current_page_number == Page::INVALID_NUMBER)
-	{
-		// Page has been deleted since it was read.
-		throw InvalidPageException(new_page_number, filename_);
-	}
-	// Page on disk may have had its next page pointer updated since it was read;
-	// we don't modify that, but we do keep all the other modifications to the
-	// page header.
-	const PageId next_page_number = header.next_page_number;
-	header = new_page.header_;
-	header.next_page_number = next_page_number;
-	writePage(new_page_number, header, new_page);
+  PageHeader header = readPageHeader(new_page_number);
+  if (header.current_page_number == Page::INVALID_NUMBER) {
+    // Page has been deleted since it was read.
+    throw InvalidPageException(new_page_number, filename_);
+  }
+  // Page on disk may have had its next page pointer updated since it was read;
+  // we don't modify that, but we do keep all the other modifications to the
+  // page header.
+  const PageId next_page_number = header.next_page_number;
+  header = new_page.header_;
+  header.next_page_number = next_page_number;
+  writePage(new_page_number, header, new_page);
 }
 
 void PageFile::deletePage(const PageId page_number) {
@@ -298,7 +280,8 @@ void PageFile::deletePage(const PageId page_number) {
   header.first_free_page = page_number;
   ++header.num_free_pages;
   if (previous_page.isUsed()) {
-    writePage(previous_page.page_number(), previous_page.header_, previous_page);
+    writePage(previous_page.page_number(), previous_page.header_,
+              previous_page);
   }
   writePage(page_number, existing_page.header_, existing_page);
   writeHeader(header);
@@ -314,7 +297,7 @@ FileIterator PageFile::end() {
 }
 
 void PageFile::writePage(const PageId page_number, const PageHeader& header,
-                     const Page& new_page) {
+                         const Page& new_page) {
   stream_->seekp(pagePosition(page_number), std::ios::beg);
   stream_->write(reinterpret_cast<const char*>(&header), sizeof(PageHeader));
   stream_->write(&new_page.data_[0], Page::DATA_SIZE);
@@ -328,9 +311,6 @@ PageHeader PageFile::readPageHeader(PageId page_number) const {
   return header;
 }
 
-
-
-
 BlobFile BlobFile::create(const std::string& filename) {
   return BlobFile(filename, true /* create_new */);
 }
@@ -340,60 +320,56 @@ BlobFile BlobFile::open(const std::string& filename) {
 }
 
 BlobFile::BlobFile(const std::string& name, const bool create_new)
-: File(name, create_new) {
-}
+    : File(name, create_new) {}
 
-BlobFile::~BlobFile() {
-}
+BlobFile::~BlobFile() {}
 
 BlobFile::BlobFile(const BlobFile& other)
-: File(other.filename_, false /* create_new */)
-{
-}
+    : File(other.filename_, false /* create_new */) {}
 
 BlobFile& BlobFile::operator=(const BlobFile& rhs) {
   // This accounts for self-assignment and assignment of a File object for the
   // same file.
-  close();	//close my file and associate me with the new one
+  close();  // close my file and associate me with the new one
   filename_ = rhs.filename_;
   openIfNeeded(false /* create_new */);
   return *this;
 }
 
-Page BlobFile::allocatePage(PageId &new_page_number) {
+Page BlobFile::allocatePage(PageId& new_page_number) {
   FileHeader header = readHeader();
-	Page new_page;
+  Page new_page;
 
-	new_page_number = header.num_pages;
+  new_page_number = header.num_pages;
 
-	if (header.first_used_page == Page::INVALID_NUMBER) {
-		header.first_used_page = header.num_pages;
-	}
+  if (header.first_used_page == Page::INVALID_NUMBER) {
+    header.first_used_page = header.num_pages;
+  }
 
-	++header.num_pages;
+  ++header.num_pages;
 
-	writePage(new_page_number, new_page);
-	writeHeader(header);
+  writePage(new_page_number, new_page);
+  writeHeader(header);
 
-	return new_page;
+  return new_page;
 }
 
 Page BlobFile::readPage(const PageId page_number) const {
-	Page page;
-	stream_->seekg(pagePosition(page_number), std::ios::beg);
-	stream_->read(reinterpret_cast<char*>(&page), Page::SIZE);
-	return page;
+  Page page;
+  stream_->seekg(pagePosition(page_number), std::ios::beg);
+  stream_->read(reinterpret_cast<char*>(&page), Page::SIZE);
+  return page;
 }
 
 void BlobFile::writePage(const PageId new_page_number, const Page& new_page) {
-	stream_->seekp(pagePosition(new_page_number), std::ios::beg);
-	stream_->write(reinterpret_cast<const char*>(&new_page), Page::SIZE);
-	stream_->flush();
+  stream_->seekp(pagePosition(new_page_number), std::ios::beg);
+  stream_->write(reinterpret_cast<const char*>(&new_page), Page::SIZE);
+  stream_->flush();
 }
 
-//delePage should not be called for a blob_file, not supported
+// delePage should not be called for a blob_file, not supported
 void BlobFile::deletePage(const PageId page_number) {
-	throw InvalidPageException(page_number, filename_);
+  throw InvalidPageException(page_number, filename_);
 }
 
-}
+}  // namespace badgerdb

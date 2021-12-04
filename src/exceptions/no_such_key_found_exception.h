@@ -2,7 +2,8 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
 #pragma once
@@ -25,4 +26,4 @@ class NoSuchKeyFoundException : public BadgerDbException {
   NoSuchKeyFoundException();
 };
 
-}
+}  // namespace badgerdb

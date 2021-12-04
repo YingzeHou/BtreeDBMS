@@ -2,7 +2,8 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
 #include "bad_index_info_exception.h"
@@ -19,4 +20,4 @@ BadIndexInfoException::BadIndexInfoException(const std::string& reason)
   message_.assign(ss.str());
 }
 
-}
+}  // namespace badgerdb

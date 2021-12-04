@@ -2,7 +2,8 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
 #pragma once
@@ -38,4 +39,4 @@ class FileNotFoundException : public BadgerDbException {
   const std::string& filename_;
 };
 
-}
+}  // namespace badgerdb

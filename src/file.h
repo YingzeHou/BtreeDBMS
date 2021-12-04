@@ -2,15 +2,16 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
 #pragma once
 
 #include <fstream>
-#include <string>
 #include <map>
 #include <memory>
+#include <string>
 
 #include "page.h"
 
@@ -49,10 +50,9 @@ struct FileHeader {
    * @return  True if the other header is equal to this one.
    */
   bool operator==(const FileHeader& rhs) const {
-    return num_pages == rhs.num_pages &&
-        num_free_pages == rhs.num_free_pages &&
-        first_used_page == rhs.first_used_page &&
-        first_free_page == rhs.first_free_page;
+    return num_pages == rhs.num_pages && num_free_pages == rhs.num_free_pages &&
+           first_used_page == rhs.first_used_page &&
+           first_free_page == rhs.first_free_page;
   }
 };
 
@@ -64,17 +64,16 @@ struct FileHeader {
  * fixed-sized pages, and they never deallocate space (though they do reuse
  * deleted pages if possible).  If multiple File objects refer to the same
  * underlying file, they will share the stream in memory.
- * If a file that has already been opened (possibly by another query), then the File class
- * detects this (by looking in the open_streams_ map) and just returns a file object with
- * the already created stream for the file without actually opening the UNIX file again. 
+ * If a file that has already been opened (possibly by another query), then the
+ * File class detects this (by looking in the open_streams_ map) and just
+ * returns a file object with the already created stream for the file without
+ * actually opening the UNIX file again.
  *
  * @warning This class is not threadsafe.
  */
 
-
 class File {
  public:
-
   /**
    * Constructs a file object representing a file on the filesystem.
    *
@@ -103,7 +102,6 @@ class File {
    */
   static bool isOpen(const std::string& filename);
 
-
   /**
    * Returns true if the file exists and is open.
    *
@@ -122,7 +120,7 @@ class File {
    *
    * @return The new page.
    */
-  virtual Page allocatePage(PageId &new_page_number) = 0;
+  virtual Page allocatePage(PageId& new_page_number) = 0;
 
   /**
    * Reads an existing page from the file.
@@ -157,12 +155,12 @@ class File {
    */
   const std::string& filename() const { return filename_; }
 
- 	/**
+  /**
    * Returns pageid of first page in the file.
    *
    * @return  Iterator at first page of file.
    */
-	PageId getFirstPageNo();
+  PageId getFirstPageNo();
 
  protected:
   /**
@@ -238,7 +236,6 @@ class File {
 
 class PageFile : public File {
  public:
-
   /**
    * Creates a new file.
    *
@@ -249,10 +246,13 @@ class PageFile : public File {
 
   /**
    * Opens the file named fileName and returns the corresponding File object.
-	 * It first checks if the file is already open. If so, then the new File object created uses the same input-output stream to read to or write fom
-	 * that already open file. Reference count (open_counts_ static variable inside the File object) is incremented whenever an already open file is
-	 * opened again. Otherwise the UNIX file is actually opened. The fileName and the stream associated with this File object are inserted into the
-	 * open_streams_ map.
+   * It first checks if the file is already open. If so, then the new File
+   * object created uses the same input-output stream to read to or write fom
+   * that already open file. Reference count (open_counts_ static variable
+   * inside the File object) is incremented whenever an already open file is
+   * opened again. Otherwise the UNIX file is actually opened. The fileName and
+   * the stream associated with this File object are inserted into the
+   * open_streams_ map.
    *
    * @param filename  Name of the file.
    * @throws  FileNotFoundException   If the requested file doesn't exist.
@@ -273,7 +273,7 @@ class PageFile : public File {
 
   /**
    * Copy constructor.
-   * 
+   *
    * @param other File object to copy.
    * @return      A copy of the File object.
    */
@@ -298,7 +298,7 @@ class PageFile : public File {
    *
    * @return The new page.
    */
-  Page allocatePage(PageId &new_page_number) override;
+  Page allocatePage(PageId& new_page_number) override;
 
   /**
    * Reads an existing page from the file.
@@ -342,7 +342,6 @@ class PageFile : public File {
   FileIterator end();
 
  private:
-
   /**
    * Reads a page from the file.  If <allow_free> is not set, an exception
    * will be thrown if the page read from disk is not currently in use.
@@ -384,7 +383,6 @@ class PageFile : public File {
 
 class BlobFile : public File {
  public:
-
   /**
    * Creates a new BlobFile.
    *
@@ -395,10 +393,13 @@ class BlobFile : public File {
 
   /**
    * Opens the file named fileName and returns the corresponding File object.
-	 * It first checks if the file is already open. If so, then the new File object created uses the same input-output stream to read to or write fom
-	 * that already open file. Reference count (open_counts_ static variable inside the File object) is incremented whenever an already open file is
-	 * opened again. Otherwise the UNIX file is actually opened. The fileName and the stream associated with this File object are inserted into the
-	 * open_streams_ map.
+   * It first checks if the file is already open. If so, then the new File
+   * object created uses the same input-output stream to read to or write fom
+   * that already open file. Reference count (open_counts_ static variable
+   * inside the File object) is incremented whenever an already open file is
+   * opened again. Otherwise the UNIX file is actually opened. The fileName and
+   * the stream associated with this File object are inserted into the
+   * open_streams_ map.
    *
    * @param filename  Name of the file.
    * @throws  FileNotFoundException   If the requested file doesn't exist.
@@ -421,7 +422,7 @@ class BlobFile : public File {
 
   /**
    * Copy constructor.
-   * 
+   *
    * @param other File object to copy.
    * @return      A copy of the File object.
    */
@@ -446,7 +447,7 @@ class BlobFile : public File {
    *
    * @return The new page.
    */
-  Page allocatePage(PageId &new_page_number) override;
+  Page allocatePage(PageId& new_page_number) override;
 
   /**
    * Reads an existing page from the file.
@@ -475,4 +476,4 @@ class BlobFile : public File {
   void deletePage(const PageId page_number) override;
 };
 
-}
+}  // namespace badgerdb

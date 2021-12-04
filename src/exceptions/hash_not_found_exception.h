@@ -2,7 +2,8 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
 #pragma once
@@ -15,7 +16,8 @@
 namespace badgerdb {
 
 /**
- * @brief An exception that is thrown when an entry being looked up in the hash table is not present in it.
+ * @brief An exception that is thrown when an entry being looked up in the hash
+ * table is not present in it.
  */
 class HashNotFoundException : public BadgerDbException {
  public:
@@ -36,4 +38,4 @@ class HashNotFoundException : public BadgerDbException {
   const PageId pageNo;
 };
 
-}
+}  // namespace badgerdb

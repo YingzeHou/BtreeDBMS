@@ -2,12 +2,14 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
 #pragma once
 
 #include <cassert>
+
 #include "file.h"
 #include "page.h"
 #include "types.h"
@@ -25,10 +27,7 @@ class FileIterator {
   /**
    * Constructs an empty iterator.
    */
-  FileIterator()
-      : file_(NULL),
-        current_page_number_(Page::INVALID_NUMBER) {
-  }
+  FileIterator() : file_(NULL), current_page_number_(Page::INVALID_NUMBER) {}
 
   /**
    * Constructors an iterator over the pages in a file, starting at the first
@@ -36,8 +35,7 @@ class FileIterator {
    *
    * @param file  File to iterate over.
    */
-  FileIterator(PageFile* file)
-      : file_(file) {
+  FileIterator(PageFile* file) : file_(file) {
     assert(file_ != NULL);
     const FileHeader& header = file_->readHeader();
     current_page_number_ = header.first_used_page;
@@ -51,32 +49,29 @@ class FileIterator {
    * @param page_number Number of page to start iterator at.
    */
   FileIterator(PageFile* file, PageId page_number)
-      : file_(file),
-        current_page_number_(page_number) {
-  }
+      : file_(file), current_page_number_(page_number) {}
 
   /**
    * Advances the iterator to the next page in the file.
    */
-	inline FileIterator& operator++() {
+  inline FileIterator& operator++() {
     assert(file_ != NULL);
     const PageHeader& header = file_->readPageHeader(current_page_number_);
     current_page_number_ = header.next_page_number;
 
-		return *this;
-	}
+    return *this;
+  }
 
-	//postfix
-	inline FileIterator operator++(int)
-	{
-		FileIterator tmp = *this;   // copy ourselves
+  // postfix
+  inline FileIterator operator++(int) {
+    FileIterator tmp = *this;  // copy ourselves
 
     assert(file_ != NULL);
     const PageHeader& header = file_->readPageHeader(current_page_number_);
     current_page_number_ = header.next_page_number;
 
-		return tmp;
-	}
+    return tmp;
+  }
 
   /**
    * Returns true if this iterator is equal to the given iterator.
@@ -84,14 +79,14 @@ class FileIterator {
    * @param rhs   Iterator to compare against.
    * @return    True if other iterator is equal to this one.
    */
-	inline bool operator==(const FileIterator& rhs) const {
+  inline bool operator==(const FileIterator& rhs) const {
     return file_->filename() == rhs.file_->filename() &&
-        current_page_number_ == rhs.current_page_number_;
+           current_page_number_ == rhs.current_page_number_;
   }
 
-	inline bool operator!=(const FileIterator& rhs) const {
+  inline bool operator!=(const FileIterator& rhs) const {
     return (file_->filename() != rhs.file_->filename()) ||
-        (current_page_number_ != rhs.current_page_number_);
+           (current_page_number_ != rhs.current_page_number_);
   }
 
   /**
@@ -100,8 +95,9 @@ class FileIterator {
    *
    * @return  Page in file.
    */
-	inline Page operator*() const
-  { return file_->readPage(current_page_number_); }
+  inline Page operator*() const {
+    return file_->readPage(current_page_number_);
+  }
 
  private:
   /**
@@ -115,4 +111,4 @@ class FileIterator {
   PageId current_page_number_;
 };
 
-}
+}  // namespace badgerdb

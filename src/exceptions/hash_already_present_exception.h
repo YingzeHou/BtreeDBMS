@@ -2,7 +2,8 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
 #pragma once
@@ -15,14 +16,16 @@
 namespace badgerdb {
 
 /**
- * @brief An exception that is thrown when a new entry to be inserted in the hash table is already present in it.
+ * @brief An exception that is thrown when a new entry to be inserted in the
+ * hash table is already present in it.
  */
 class HashAlreadyPresentException : public BadgerDbException {
  public:
   /**
    * Constructs a hash already present exception for the given file.
    */
-  explicit HashAlreadyPresentException(const std::string& nameIn, PageId pageNoIn, FrameId frameNoIn);
+  explicit HashAlreadyPresentException(const std::string& nameIn,
+                                       PageId pageNoIn, FrameId frameNoIn);
 
  protected:
   /**
@@ -41,4 +44,4 @@ class HashAlreadyPresentException : public BadgerDbException {
   const FrameId frameNo;
 };
 
-}
+}  // namespace badgerdb

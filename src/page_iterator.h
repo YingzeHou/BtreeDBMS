@@ -2,12 +2,14 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
 #pragma once
 
 #include <cassert>
+
 #include "file.h"
 #include "page.h"
 #include "types.h"
@@ -25,8 +27,7 @@ class PageIterator {
   /**
    * Constructs an empty iterator.
    */
-  PageIterator()
-      : page_(NULL) {
+  PageIterator() : page_(NULL) {
     current_record_ = {Page::INVALID_NUMBER, Page::INVALID_SLOT};
   }
 
@@ -36,8 +37,7 @@ class PageIterator {
    *
    * @param page  Page to iterate over.
    */
-  PageIterator(Page* page)
-      : page_(page)  {
+  PageIterator(Page* page) : page_(page) {
     assert(page_ != NULL);
     const SlotId used_slot = getNextUsedSlot(Page::INVALID_SLOT /* start */);
     current_record_ = {page_->page_number(), used_slot, 0};
@@ -51,29 +51,27 @@ class PageIterator {
    * @param record_id   ID of record to start iterator at.
    */
   PageIterator(Page* page, const RecordId& record_id)
-      : page_(page),
-        current_record_(record_id) {
-  }
+      : page_(page), current_record_(record_id) {}
 
   /**
    * Advances the iterator to the next record in the page.
    */
-	inline PageIterator& operator++() {
+  inline PageIterator& operator++() {
     assert(page_ != NULL);
     const SlotId used_slot = getNextUsedSlot(current_record_.slot_number);
     current_record_ = {page_->page_number(), used_slot, 0};
 
-		return *this;
+    return *this;
   }
 
-	inline PageIterator operator++(int) {
-		PageIterator tmp = *this;   // copy ourselves
+  inline PageIterator operator++(int) {
+    PageIterator tmp = *this;  // copy ourselves
 
     assert(page_ != NULL);
     const SlotId used_slot = getNextUsedSlot(current_record_.slot_number);
     current_record_ = {page_->page_number(), used_slot, 0};
 
-		return tmp;
+    return tmp;
   }
   /**
    * Returns true if this iterator is equal to the given iterator.
@@ -81,14 +79,14 @@ class PageIterator {
    * @param rhs   Iterator to compare against.
    * @return    True if other iterator is equal to this one.
    */
-	inline bool operator==(const PageIterator& rhs) const {
+  inline bool operator==(const PageIterator& rhs) const {
     return page_->page_number() == rhs.page_->page_number() &&
-        current_record_ == rhs.current_record_;
+           current_record_ == rhs.current_record_;
   }
 
-	inline bool operator!=(const PageIterator& rhs) const {
-    return (page_->page_number() != rhs.page_->page_number()) || 
-        (current_record_ != rhs.current_record_);
+  inline bool operator!=(const PageIterator& rhs) const {
+    return (page_->page_number() != rhs.page_->page_number()) ||
+           (current_record_ != rhs.current_record_);
   }
 
   /**
@@ -97,9 +95,9 @@ class PageIterator {
    *
    * @return  Record in page.
    */
-	inline std::string operator*() const {
-		return page_->getRecord(current_record_); 
-	}
+  inline std::string operator*() const {
+    return page_->getRecord(current_record_);
+  }
 
   /**
    * Returns the next used slot in the page after the given slot or
@@ -120,10 +118,7 @@ class PageIterator {
     return slot_number;
   }
 
-	RecordId getCurrentRecord()
-	{
-		return current_record_;
-	}
+  RecordId getCurrentRecord() { return current_record_; }
 
  private:
   /**
@@ -136,8 +131,8 @@ class PageIterator {
    */
   RecordId current_record_;
 
-  //FRIEND_TEST(PageTest, GetNextUsedSlot);
-  //FRIEND_TEST(BufferTest, GetNextUsedSlot);
+  // FRIEND_TEST(PageTest, GetNextUsedSlot);
+  // FRIEND_TEST(BufferTest, GetNextUsedSlot);
 };
 
-}
+}  // namespace badgerdb

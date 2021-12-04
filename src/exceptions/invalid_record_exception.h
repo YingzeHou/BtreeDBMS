@@ -2,7 +2,8 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
 #pragma once
@@ -27,8 +28,7 @@ class InvalidRecordException : public BadgerDbException {
    * @param rec_id   Requested record ID.
    * @param page_num Page from which record is requested.
    */
-  InvalidRecordException(const RecordId& rec_id,
-                         const PageId page_num);
+  InvalidRecordException(const RecordId& rec_id, const PageId page_num);
 
   /**
    * Returns the requested record ID that caused this exception.
@@ -52,4 +52,4 @@ class InvalidRecordException : public BadgerDbException {
   const PageId page_number_;
 };
 
-}
+}  // namespace badgerdb

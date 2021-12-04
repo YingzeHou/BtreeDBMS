@@ -2,7 +2,8 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
 #pragma once
@@ -15,14 +16,16 @@
 namespace badgerdb {
 
 /**
- * @brief An exception that is thrown when a page which is expected to be pinned in the buffer pool is found to be not pinned.
+ * @brief An exception that is thrown when a page which is expected to be pinned
+ * in the buffer pool is found to be not pinned.
  */
 class PageNotPinnedException : public BadgerDbException {
  public:
   /**
    * Constructs a page not pinned exception for the given file.
    */
-  explicit PageNotPinnedException(const std::string& nameIn, PageId pageNoIn, FrameId frameNoIn);
+  explicit PageNotPinnedException(const std::string& nameIn, PageId pageNoIn,
+                                  FrameId frameNoIn);
 
  protected:
   /**
@@ -41,4 +44,4 @@ class PageNotPinnedException : public BadgerDbException {
   const FrameId frameNo;
 };
 
-}
+}  // namespace badgerdb

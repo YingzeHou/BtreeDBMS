@@ -2,25 +2,25 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
-#include <cassert>
+#include "page.h"
 
+#include <cassert>
 #include <iostream>
+
 #include "exceptions/insufficient_space_exception.h"
 #include "exceptions/invalid_record_exception.h"
 #include "exceptions/invalid_slot_exception.h"
 #include "exceptions/slot_in_use_exception.h"
 #include "page_iterator.h"
-#include "page.h"
 #include "string.h"
 
 namespace badgerdb {
 
-Page::Page() {
-  initialize();
-}
+Page::Page() { initialize(); }
 
 void Page::initialize() {
   header_.free_space_lower_bound = 0;
@@ -29,14 +29,14 @@ void Page::initialize() {
   header_.num_free_slots = 0;
   header_.current_page_number = INVALID_NUMBER;
   header_.next_page_number = INVALID_NUMBER;
-  //data_.assign(DATA_SIZE, char());
-	memset(data_, '\0', DATA_SIZE);
+  // data_.assign(DATA_SIZE, char());
+  memset(data_, '\0', DATA_SIZE);
 }
 
 RecordId Page::insertRecord(const std::string& record_data) {
   if (!hasSpaceForRecord(record_data)) {
-    throw InsufficientSpaceException(
-        page_number(), record_data.length(), getFreeSpace());
+    throw InsufficientSpaceException(page_number(), record_data.length(),
+                                     getFreeSpace());
   }
   const SlotId slot_number = getAvailableSlot();
   insertRecordInSlot(slot_number, record_data);
@@ -46,9 +46,10 @@ RecordId Page::insertRecord(const std::string& record_data) {
 std::string Page::getRecord(const RecordId& record_id) const {
   validateRecordId(record_id);
   const PageSlot& slot = getSlot(record_id.slot_number);
-	std::string retStr = std::string(data_, DATA_SIZE).substr(slot.item_offset, slot.item_length);
+  std::string retStr =
+      std::string(data_, DATA_SIZE).substr(slot.item_offset, slot.item_length);
 
-	return retStr;
+  return retStr;
 }
 
 void Page::updateRecord(const RecordId& record_id,
@@ -58,8 +59,8 @@ void Page::updateRecord(const RecordId& record_id,
   const std::size_t free_space_after_delete =
       getFreeSpace() + slot->item_length;
   if (record_data.length() > free_space_after_delete) {
-    throw InsufficientSpaceException(
-        page_number(), record_data.length(), free_space_after_delete);
+    throw InsufficientSpaceException(page_number(), record_data.length(),
+                                     free_space_after_delete);
   }
   // We have to disallow slot compaction here because we're going to place the
   // record data in the same slot, and compaction might delete the slot if we
@@ -77,13 +78,14 @@ void Page::deleteRecord(const RecordId& record_id,
   validateRecordId(record_id);
   PageSlot* slot = getSlot(record_id.slot_number);
 
-	for(int i = 0; i < slot->item_length; i++)
-		data_[i + slot->item_offset] = '\0';
+  for (int i = 0; i < slot->item_length; i++)
+    data_[i + slot->item_offset] = '\0';
 
-  //data_.replace(slot->item_offset, slot->item_length, slot->item_length, '\0');
+  // data_.replace(slot->item_offset, slot->item_length, slot->item_length,
+  // '\0');
 
   // Compact the data by removing the hole left by this record (if necessary).
-  std::uint16_t move_offset = slot->item_offset; 
+  std::uint16_t move_offset = slot->item_offset;
   std::size_t move_bytes = 0;
   for (SlotId i = 1; i <= header_.num_slots; ++i) {
     PageSlot* other_slot = getSlot(i);
@@ -99,12 +101,13 @@ void Page::deleteRecord(const RecordId& record_id,
   }
   // If we have data to move, shift it to the right.
   if (move_bytes > 0) {
-    const std::string& data_to_move = std::string(data_, DATA_SIZE).substr(move_offset, move_bytes);
+    const std::string& data_to_move =
+        std::string(data_, DATA_SIZE).substr(move_offset, move_bytes);
 
-		for(std::uint16_t i = 0; i < move_bytes; i++)
-			data_[i + move_offset + slot->item_length] = data_to_move[i];
+    for (std::uint16_t i = 0; i < move_bytes; i++)
+      data_[i + move_offset + slot->item_length] = data_to_move[i];
 
-    //data_.replace(move_offset + slot->item_length, move_bytes, data_to_move);
+    // data_.replace(move_offset + slot->item_length, move_bytes, data_to_move);
   }
   header_.free_space_upper_bound += slot->item_length;
 
@@ -144,11 +147,13 @@ bool Page::hasSpaceForRecord(const std::string& record_data) const {
 }
 
 PageSlot* Page::getSlot(const SlotId slot_number) {
-  return reinterpret_cast<PageSlot*>(&data_[(slot_number - 1) * sizeof(PageSlot)]);
+  return reinterpret_cast<PageSlot*>(
+      &data_[(slot_number - 1) * sizeof(PageSlot)]);
 }
 
 const PageSlot& Page::getSlot(const SlotId slot_number) const {
-  return *reinterpret_cast<const PageSlot*>(&data_[(slot_number - 1) * sizeof(PageSlot)]);
+  return *reinterpret_cast<const PageSlot*>(
+      &data_[(slot_number - 1) * sizeof(PageSlot)]);
 }
 
 SlotId Page::getAvailableSlot() {
@@ -177,8 +182,7 @@ SlotId Page::getAvailableSlot() {
 
 void Page::insertRecordInSlot(const SlotId slot_number,
                               const std::string& record_data) {
-  if (slot_number > header_.num_slots ||
-      slot_number == INVALID_SLOT) {
+  if (slot_number > header_.num_slots || slot_number == INVALID_SLOT) {
     throw InvalidSlotException(page_number(), slot_number);
   }
   PageSlot* slot = getSlot(slot_number);
@@ -192,10 +196,10 @@ void Page::insertRecordInSlot(const SlotId slot_number,
   header_.free_space_upper_bound = slot->item_offset;
   --header_.num_free_slots;
 
-	for(int i = 0; i < slot->item_length; i++)
-		data_[i + slot->item_offset] = record_data[i];
+  for (int i = 0; i < slot->item_length; i++)
+    data_[i + slot->item_offset] = record_data[i];
 
-  //data_.replace(slot->item_offset, slot->item_length, record_data);
+  // data_.replace(slot->item_offset, slot->item_length, record_data);
 }
 
 void Page::validateRecordId(const RecordId& record_id) const {
@@ -208,13 +212,11 @@ void Page::validateRecordId(const RecordId& record_id) const {
   }
 }
 
-PageIterator Page::begin() {
-  return PageIterator(this);
-}
+PageIterator Page::begin() { return PageIterator(this); }
 
 PageIterator Page::end() {
   const RecordId& end_record_id = {page_number(), Page::INVALID_SLOT, 0};
   return PageIterator(this, end_record_id);
 }
 
-}
+}  // namespace badgerdb

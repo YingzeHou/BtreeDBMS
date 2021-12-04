@@ -2,13 +2,15 @@
  * @author See Contributors.txt for code contributors and overview of BadgerDB.
  *
  * @section LICENSE
- * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
+ * Copyright (c) 2012 Database Group, Computer Sciences Department, University
+ * of Wisconsin-Madison.
  */
 
 #pragma once
 
-#include <cstddef>
 #include <stdint.h>
+
+#include <cstddef>
 #include <memory>
 #include <string>
 
@@ -65,10 +67,9 @@ struct PageHeader {
    * @return  True if the other header is equal to this one.
    */
   bool operator==(const PageHeader& rhs) const {
-    return num_slots == rhs.num_slots &&
-        num_free_slots == rhs.num_free_slots &&
-        current_page_number == rhs.current_page_number &&
-        next_page_number == rhs.next_page_number;
+    return num_slots == rhs.num_slots && num_free_slots == rhs.num_free_slots &&
+           current_page_number == rhs.current_page_number &&
+           next_page_number == rhs.next_page_number;
   }
 };
 
@@ -183,8 +184,9 @@ class Page {
    *
    * @return  Free space in bytes.
    */
-  std::uint16_t getFreeSpace() const { return header_.free_space_upper_bound -
-                                              header_.free_space_lower_bound; }
+  std::uint16_t getFreeSpace() const {
+    return header_.free_space_upper_bound - header_.free_space_lower_bound;
+  }
 
   /**
    * Returns this page's number in its file.
@@ -266,7 +268,7 @@ class Page {
    * Returns the slot with the given number.  This method will return
    * unallocated slots if requested; it is up to the caller to ensure they
    * have a valid slot number.
-   * 
+   *
    * @param slot_number   Number of slot to retrieve.
    * @return  The slot.
    */
@@ -341,7 +343,6 @@ class Page {
 
 static_assert(Page::SIZE > sizeof(PageHeader),
               "Page size must be large enough to hold header and data.");
-static_assert(Page::DATA_SIZE > 0,
-              "Page must have some space to hold data.");
+static_assert(Page::DATA_SIZE > 0, "Page must have some space to hold data.");
 
-}
+}  // namespace badgerdb
