@@ -180,8 +180,8 @@ class BufMgr {
   /**
    * Allocate a free frame.
    *
-   * @param frame   	Frame reference, frame ID of allocated frame returned via
-   * this variable
+   * @param frame   	Frame reference, frame ID of allocated frame returned
+   * via this variable
    * @throws BufferExceededException If no such buffer is found which can be
    * allocated
    */
@@ -211,8 +211,8 @@ class BufMgr {
    *
    * @param file   	File object
    * @param PageNo  Page number in the file to be read
-   * @param page  	Reference to page pointer. Used to fetch the Page object in
-   * which requested page from file is read in.
+   * @param page  	Reference to page pointer. Used to fetch the Page object
+   * in which requested page from file is read in.
    */
   void readPage(File* file, const PageId PageNo, Page*& page);
 
@@ -222,8 +222,8 @@ class BufMgr {
    *
    * @param file   	File object
    * @param PageNo  Page number
-   * @param dirty		True if the page to be unpinned needs to be marked
-   * dirty
+   * @param dirty		True if the page to be unpinned needs to be
+   * marked dirty
    * @throws  PageNotPinnedException If the page is not already pinned
    */
   void unPinPage(File* file, const PageId PageNo, const bool dirty);

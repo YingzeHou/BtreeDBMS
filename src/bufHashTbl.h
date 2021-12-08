@@ -79,8 +79,8 @@ class BufHashTbl {
    * @param file   	File object
    * @param pageNo 	Page number in the file
    * @param frameNo Frame number assigned to that page of the file
-   * @throws  HashAlreadyPresentException	if the corresponding page already
-   * exists in the hash table
+   * @throws  HashAlreadyPresentException	if the corresponding page
+   * already exists in the hash table
    * @throws  HashTableException (optional) if could not create a new bucket as
    * running of memory
    */

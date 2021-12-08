@@ -192,6 +192,11 @@ class BTreeIndex {
   File* file;
 
   /**
+   * Keep track of initial page before split
+   */
+  PageId initial;
+
+  /**
    * Buffer Manager Instance.
    */
   BufMgr* bufMgr;
@@ -288,11 +293,15 @@ class BTreeIndex {
    */
   Operator highOp;
 
-  void insertNodeLeaf(LeafNodeInt *node, RIDKeyPair<int> entryInsertPair);
+  void insertNodeLeaf(LeafNodeInt* node, RIDKeyPair<int> entryInsertPair);
 
-  void insertNodeNonLeaf(NonLeafNodeInt *node, PageKeyPair<int> *entryInsertPair);
+  void insertNodeNonLeaf(NonLeafNodeInt* node,
+                         PageKeyPair<int>* entryInsertPair);
 
-  void insertEntryHelper(RIDKeyPair<int> entryInsertPair, PageKeyPair<int> *&entryPropPair, Page *currPage, PageId currPageNum, bool isLeafNode);
+  void insertEntryHelper(RIDKeyPair<int> entryInsertPair,
+                         PageKeyPair<int>*& entryPropPair, Page* currPage,
+                         PageId currPageNum, bool isLeafNode);
+
  public:
   /**
    * BTreeIndex Constructor.
@@ -304,10 +313,10 @@ class BTreeIndex {
    * @param outIndexName        Return the name of index file.
    * @param bufMgrIn						Buffer Manager
    * Instance
-   * @param attrByteOffset			Offset of attribute, over which index is to
-   * be built, in the record
-   * @param attrType						Datatype of attribute over which index is
-   * built
+   * @param attrByteOffset			Offset of attribute, over which index
+   * is to be built, in the record
+   * @param attrType						Datatype of attribute over which
+   * index is built
    * @throws  BadIndexInfoException     If the index file already exists for the
    * corresponding attribute, but values in metapage(relationName, attribute
    * byte offset, attribute type etc.) do not match with values received through
@@ -336,8 +345,8 @@ class BTreeIndex {
    *accordingly. Make sure to unpin pages as soon as you can.
    * @param key			Key to insert, pointer to integer/double/char
    *string
-   * @param rid			Record ID of a record whose entry is getting inserted
-   *into the index.
+   * @param rid			Record ID of a record whose entry is getting
+   *inserted into the index.
    **/
   void insertEntry(const void* key, const RecordId rid);
 
