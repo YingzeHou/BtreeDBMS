@@ -477,6 +477,23 @@ void BTreeIndex::scanNext(RecordId &outRid) {
 // BTreeIndex::endScan
 // -----------------------------------------------------------------------------
 //
-void BTreeIndex::endScan() {}
+
+/**
+   * Terminate the current scan. Unpin any pinned pages. Reset scan specific
+   *variables.
+   * @throws ScanNotInitializedException If no scan has been initialized.
+   **/
+void BTreeIndex::endScan() {
+    if(!scanExecuting){
+        throw ScanNotInitializedException();
+    }
+
+    currentPageData = nullptr;
+    bufMgr->unPinPage(this->file,this->currentPageNum, false);
+    this->scanExecuting = false;
+
+    this->currentPageNum = -1;
+    nextEntry = -1;
+}
 
 }  // namespace badgerdb
