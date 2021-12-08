@@ -295,6 +295,131 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid) {
   }
 }
 
+void BTreeIndex::splitLeafNode(LeafNodeInt *oldNode, PageId oldPageID, PageKeyPair *&pushUpPage, RIDKeyPair<int> insertRecord) {
+	// allocate space for a new leaf node
+	Page *newPage;
+	PageId newPageID;
+	BufMgr->allocPage(file, newPageID, newPage);
+	LeafNodeInt *newNode = (LeafNodeInt *)newPage;
+
+	// split the old node into 2 parts from index [0, mid] and [mid + 1, leafOccupancy - 1]
+	int mid = leafOccupancy / 2 - 1;
+	if (leafOccupancy % 2 == 0 && insertRecord.key >= oldNode->keyArray[mid])
+		mid++; // e.g: keyArray={3, 6, 8}, initially mid = 0 which points to 3. insert 9 mid should be 1 to balance
+	int index = 0;
+	for (int i = mid + 1; i < leafOccupancy; i++) {
+		newNode->keyArray[index] = oldNode->keyArray[i];
+		oldNode->keyArray[i] = 0;
+		newNode->ridArray[index] = oldNode->ridArray[i];
+		oldNode->ridArray[i] = 0;
+		index++;
+	}
+
+	// insert the record to the appropriate part based on the key value
+	if (insertRecord.key < oldNode->keyArray[mid]) {
+		insertLeafNode(oldNode, insertRecord);
+	} else {
+		insertLeafNode(newNode, insertRecord);
+	}
+
+	// update sibling relation after inserting
+	newNode->level = oldNode->level;
+	newNode->rightSibPageNo = oldNode->rightSibPageNo;
+	oldNode->rightSibPageNo = newPageID;
+
+	// copy the middle key value to the pushUpPage
+	PageKeyPair<int> middleRecord;
+	middleRecord.set(newPageID, newNode->keyArray[0]);
+	pushUpPage = &middleRecord;
+
+	// update root if the old node is root itself
+	if (oldPageID == rootPageNum) {
+		updateRoot(rootPageNum, pushUpPage);
+	}
+
+	// unpin
+	bufMgr->unPinPage(file, oldPageID, true);
+	bufMgr->unPinPage(file, newPageID, true);
+}
+
+void BTreeIndex::splitNonLeafNode(LeafNodeInt *oldNode, PageId oldPageID, PageKeyPair *&pushUpPage) {
+	// allocate space for a new leaf node
+	Page *newPage;
+	PageId newPageID;
+	BufMgr->allocPage(file, newPageID, newPage);
+	LeafNodeInt *newNode = (LeafNodeInt *)newPage;
+
+	// split the old node into 2 parts from index [0, mid] and [mid + 1, leafOccupancy - 1]
+	int mid = leafOccupancy / 2 - 1;
+	if (leafOccupancy % 2 == 0 && insertRecord.key >= oldNode->keyArray[mid])
+		mid++; // e.g: keyArray={3, 6, 8}, initially mid = 0 which points to 3. insert 9 mid should be 1 to balance
+	mid++; // for the non-leaf node, we make the left part larger by 1 because it's easier to delete key from the end of the left part and maintain structure
+	int index = 0;
+	for (int i = mid + 1; i < leafOccupancy; i++) {
+		newNode->keyArray[index] = oldNode->keyArray[i];
+		oldNode->keyArray[i] = 0;
+		newNode->pageNoArray[index] = oldNode->pageNoArray[i];
+		oldNode->pageNoArray[i] = 0;
+		index++;
+	}
+
+
+	// insert the record to the appropriate part based on the key value
+	if (insertRecord.key < newNode->keyArray[0]) {
+		insertNonLeafNode(oldNode, insertRecord);
+	} else {
+		insertNonLeafNode(newNode, insertRecord);
+	}
+
+	// update sibling relation after inserting
+	newNode->level = oldNode->level;
+	newNode->rightSibPageNo = oldNode->rightSibPageNo;
+	oldNode->rightSibPageNo = newPageID;
+
+	// copy the middle key value to the pushUpPage
+	PageKeyPair<int> middleRecord;
+	middleRecord.set(newPageID, oldNode->keyArray[mid]);
+	pushUpPage = &middleRecord;
+
+	// delete the middle key from the end of the old node
+	oldNode->keyArray[mid] = 0;
+	oldNode->pageNoArray[mid] = 0;
+
+	// update root if the old node is root itself
+	if (oldPageID == rootPageNum) {
+		updateRoot(rootPageNum, pushUpPage);
+	}
+
+	// unpin
+	bufMgr->unPinPage(file, oldPageID, true);
+	bufMgr->unPinPage(file, newPageID, true);	
+}
+
+void BTreeIndex::updateRoot(PageId oldRootID, PageKeyPair<int> *pushUpPage) {
+	// allocate space for the new root page
+	Page *newRoot;
+	PageID newRootID;
+	bufMgr->allocPage(file, newRootID, newRoot);
+
+	// retrive and update the old meta page
+	Page *metaPage;
+	bufMgr->readPage(file, headerPageNum, metaPage);
+	IndexMetaInfo *metaInfoPage = (IndexMetaInfo *) metaPage;
+	metaInfoPage->rootPageNo = newRootID;
+
+	// define the new root node
+	NonLeafNodeInt *newRootNode = (NonLeafNodeInt *) newRoot;
+	newRootNode->level = initial == rootPageNum ? 1 : 0;
+	rootPageNum = newRootID;
+	newRootNode->keyArray[0] = pushUpPage->key;
+	newRootNode->pageNoArray[0] = oldRootID;
+	newRootNode->pageNoArray[1] = pushUpPage->pageNo;
+
+	// unpin
+    bufMgr->unPinPage(file, newRootID, true);
+	bufMgr->unPinPage(file, headerPageNum, true);
+}
+
 // -----------------------------------------------------------------------------
 // BTreeIndex::startScan
 // -----------------------------------------------------------------------------
