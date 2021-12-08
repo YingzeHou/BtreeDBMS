@@ -43,74 +43,86 @@ namespace badgerdb {
  * byte offset, attribute type etc.) do not match with values received through
  * constructor parameters.
  */
-BTreeIndex::BTreeIndex(const std::string& relationName,
-                       std::string& outIndexName, BufMgr* bufMgrIn,
+BTreeIndex::BTreeIndex(const std::string &relationName,
+                       std::string &outIndexName, BufMgr *bufMgrIn,
                        const int attrByteOffset, const Datatype attrType) {
+  // construct index name
+  std::ostringstream idxStr;
+  idxStr << relationName << '.' << attrByteOffset;
+  outIndexName = idxStr.str();
 
-    // construct index name
-    std::ostringstream idxStr;
-    idxStr << relationName << '.' << attrByteOffset;
-    outIndexName = idxStr.str();
+  bool exist = false;
 
-    this->nodeOccupancy = INTARRAYNONLEAFSIZE;
-    this->leafOccupancy = INTARRAYLEAFSIZE;
-    this->bufMgr = bufMgrIn;
-    this->scanExecuting = false;
+  // Check if already exists
+  if (File::exists(outIndexName)) {
+    exist = true;
+  }
 
-    try{
-        // if file exists
-        file=new BlobFile(outIndexName, false);
+  this->attrByteOffset = attrByteOffset;
+  this->attributeType = attrType;
+  this->nodeOccupancy = INTARRAYNONLEAFSIZE;
+  this->leafOccupancy = INTARRAYLEAFSIZE;
+  this->bufMgr = bufMgrIn;
+  this->scanExecuting = false;
+  this->currentPageData = NULL;
 
-        // read meta in headerPage
-        this->headerPageNum = file->getFirstPageNo();
-        Page *headerPage;
-        bufMgr->readPage(file,headerPageNum,headerPage);
-        IndexMetaInfo *metaInfo = (IndexMetaInfo *)headerPage;
-        this->rootPageNum = metaInfo->rootPageNo;
+  Page *headerPage;
 
-        // Check for index match on relationName, attr byte offset, attr type etc.
-        if(relationName!=metaInfo->relationName || attrByteOffset!=metaInfo->attrByteOffset || attrType!=metaInfo->attrType){
-            throw BadIndexInfoException(outIndexName);
-        }
-        bufMgr->unPinPage(file,headerPageNum, false);
+  if (exist) {  // if exist
+
+    // Read the file to construct the Btree
+    this->file = new BlobFile(outIndexName, false);
+    this->headerPageNum = this->file->getFirstPageNo();
+    bufMgr->readPage(this->file, this->headerPageNum, headerPage);
+    IndexMetaInfo *metaInfo = (IndexMetaInfo *)headerPage;
+    this->rootPageNum = metaInfo->rootPageNo;
+
+    // values in metapage not match
+    if (relationName != metaInfo->relationName ||
+        attrByteOffset != metaInfo->attrByteOffset ||
+        attrType != metaInfo->attrType) {
+      throw BadIndexInfoException(outIndexName);
     }
 
-    // create new if not exist
-    catch (FileNotFoundException e){
-        file = new BlobFile(outIndexName, true);
-        Page *headerPage;
-        Page *rootPage;
+    // Unpin page as soon as possible
+    bufMgr->unPinPage(this->file, this->headerPageNum, false);
+  } else {  // not exist
 
-        bufMgr->allocPage(file,this->headerPageNum,headerPage);
-        bufMgr->allocPage(file, this->rootPageNum, rootPage);
+    // Create new file
+    this->file = new BlobFile(outIndexName, true);
+    bufMgr->allocPage(this->file, this->headerPageNum, headerPage);
+    IndexMetaInfo *metaInfo = (IndexMetaInfo *)headerPage;
 
-        IndexMetaInfo *metaInfo = (IndexMetaInfo *)headerPage;
-        metaInfo->attrType = attrType;
-        metaInfo->attrByteOffset = attrByteOffset;
-        strncpy(metaInfo->relationName, relationName.c_str(), 20);
-        metaInfo->rootPageNo = this->rootPageNum;
+    // Read in metaInfo for this file
+    strncpy(metaInfo->relationName, relationName.c_str(), 20);
+    metaInfo->attrType = attrType;
+    metaInfo->attrByteOffset = attrByteOffset;
 
+    // Initialize root
+    Page *rootPage;
+    bufMgr->allocPage(this->file, this->rootPageNum, rootPage);
+    LeafNodeInt *root = (LeafNodeInt *)rootPage;
+    root->rightSibPageNo = 0;
+    metaInfo->rootPageNo = this->rootPageNum;
 
-        // Initialize node
-        LeafNodeInt *root = (LeafNodeInt *)rootPage;
-        root->rightSibPageNo = -1;
+    // Unpin as soon as possible
+    bufMgr->unPinPage(this->file, this->headerPageNum, true);
+    bufMgr->unPinPage(this->file, this->rootPageNum, true);
 
-        bufMgr->unPinPage(file, this->headerPageNum, true);
-        bufMgr->unPinPage(file, this->rootPageNum, true);
-
-        FileScan fileScan(relationName, bufMgr);
-        RecordId rid;
-        try{
-            while(true){
-                fileScan.scanNext(rid);
-                std::string record = fileScan.getRecord();
-                insertEntry(record.c_str()+attrByteOffset,rid);
-            }
-        }
-        catch(EndOfFileException e){
-            bufMgr->flushFile(file);
-        }
+    // Scan in and fill new file
+    FileScan fileScan(relationName, bufMgr);
+    RecordId rid;
+    try {
+      while (true) {
+        fileScan.scanNext(rid);
+        std::string record = fileScan.getRecord();
+        insertEntry(record.c_str() + attrByteOffset, rid);
+      }
+    } catch (EndOfFileException e) {
+      // Save to disk
+      bufMgr->flushFile(file);
     }
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -122,10 +134,10 @@ BTreeIndex::BTreeIndex(const std::string& relationName,
  * Flush and delete the index file
  */
 BTreeIndex::~BTreeIndex() {
-    bufMgr->flushFile(BTreeIndex::file);
-    this->scanExecuting = false;
-    delete file;
-    this->file = nullptr;
+  this->bufMgr->flushFile(BTreeIndex::file);
+  this->scanExecuting = false;
+  delete file;
+  this->file = nullptr;
 }
 
 // -----------------------------------------------------------------------------
@@ -137,22 +149,120 @@ BTreeIndex::~BTreeIndex() {
  * @param key A pointer to the value (integer) we want to insert.
  * @param rid The corresponding record id of the tuple in the base relation.
  */
-void BTreeIndex::insertEntry(const void* key, const RecordId rid) {
-    // Scan from the root
-    Page *rootPage;
-    bufMgr->readPage(file,rootPageNum,rootPage);
+void BTreeIndex::insertEntry(const void *key, const RecordId rid) {
+  // Scan from the root
+  Page *rootPage;
+  bufMgr->readPage(file, rootPageNum, rootPage);
 
-    RIDKeyPair<int> ridKeyPair;
-    ridKeyPair.set(rid, *(int *)key);
-
+  RIDKeyPair<int> ridKeyPair;
+  ridKeyPair.set(rid, *(int *)key);
 }
 
 // -----------------------------------------------------------------------------
 // BTreeIndex::startScan
 // -----------------------------------------------------------------------------
+/**
+ * Begin a filtered scan of the index.  For instance, if the method is called
+ * using ("a",GT,"d",LTE) then we should seek all entries with a value
+ * greater than "a" and less than or equal to "d".
+ * If another scan is already executing, that needs to be ended here.
+ * Set up all the variables for scan. Start from root to find out the leaf
+ * page that contains the first RecordID that satisfies the scan parameters.
+ * Keep that page pinned in the buffer pool.
+ * @param lowVal	Low value of range, pointer to integer / double / char
+ * string
+ * @param lowOp		Low operator (GT/GTE)
+ * @param highVal	High value of range, pointer to integer / double / char
+ * string
+ * @param highOp	High operator (LT/LTE)
+ * @throws  BadOpcodesException If lowOp and highOp do not contain one of
+ * their their expected values
+ * @throws  BadScanrangeException If lowVal > highval
+ * @throws  NoSuchKeyFoundException If there is no key in the B+ tree that
+ * satisfies the scan criteria.
+ **/
+void BTreeIndex::startScan(const void *lowValParm, const Operator lowOpParm,
+                           const void *highValParm, const Operator highOpParm) {
+    if(this->scanExecuting){ // if scan in process
+        // end here
+        endScan();
+    }
 
-void BTreeIndex::startScan(const void* lowValParm, const Operator lowOpParm,
-                           const void* highValParm, const Operator highOpParm) {
+    this->lowValInt = *((int *)lowValParm);
+    this->highValInt = *((int *)highValParm);
+    this->lowOp = lowOpParm;
+    this->highOp = highOpParm;
+
+    // check for op exception
+    if (!((lowOp == GT || lowOp == GTE) && (highOp == LT || highOp == LTE))) {
+        throw BadOpcodesException();
+    }
+
+    // check for lowVal>highVal
+    if(lowValInt>highValInt){
+        throw BadScanrangeException();
+    }
+
+    this->currentPageNum = this->rootPageNum;
+    bufMgr->readPage(this->file,this->currentPageNum, this->currentPageData);
+    LeafNodeInt *target;
+    if(true){ // root not leaf
+        auto *current = (NonLeafNodeInt *)this->currentPageData;
+        bool foundLeaf = false;
+        while(true){
+            if(current->level==1){ // Leaf in next level
+                foundLeaf=true;
+            }
+            int index = 0;
+
+            // traverse this level of node to find the first satisfactory index
+            while(index<nodeOccupancy && current->keyArray[index]<=lowValInt && current->keyArray[index]!=0){
+                index++;
+            }
+            this->bufMgr->unPinPage(this->file,currentPageNum, false);
+
+            // Read current page in and assign to target for future node traversal
+            this->currentPageNum = current->pageNoArray[index];
+            this->bufMgr->readPage(this->file,this->currentPageNum,this->currentPageData);
+
+            if(foundLeaf) { // if current node is one level above leaf, next node is leaf
+                target = (LeafNodeInt *)currentPageData;
+                break;
+            }
+            else{ // if current node not one level above leaf, next node is non-leaf, continue to traverse
+                current = (NonLeafNodeInt *)this->currentPageData;
+            }
+        }
+    }
+    else{ // root is leaf
+        target = (LeafNodeInt *)this->currentPageData;
+    }
+    if (target->ridArray[0].page_number == 0) {
+        bufMgr->unPinPage(file, currentPageNum, false);
+        throw NoSuchKeyFoundException();
+    }
+    bool found = false;
+    while(true){
+        for(int i = 0; i<leafOccupancy; i++){
+            int key = target->keyArray[i];
+            if ((highOp == LT && key >= highValInt) || (highOp == LTE && key > highValInt)) {
+                //fail to find the key, unpin the page and throw the exception
+                bufMgr->unPinPage(file, currentPageNum, false);
+                throw NoSuchKeyFoundException();
+            }
+            if (target->keyArray[i] >= lowValInt) {
+                //find the entry successfully
+                found = true;
+                scanExecuting = true;
+                break;
+            }
+        }
+        if(found){
+            break;
+        }
+
+    }
+
 
 }
 
@@ -160,7 +270,7 @@ void BTreeIndex::startScan(const void* lowValParm, const Operator lowOpParm,
 // BTreeIndex::scanNext
 // -----------------------------------------------------------------------------
 
-void BTreeIndex::scanNext(RecordId& outRid) {}
+void BTreeIndex::scanNext(RecordId &outRid) {}
 
 // -----------------------------------------------------------------------------
 // BTreeIndex::endScan
