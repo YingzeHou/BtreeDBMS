@@ -397,6 +397,15 @@ void BTreeIndex::startScan(const void *lowValParm, const Operator lowOpParm,
         if(found){
             break;
         }
+        if (target->rightSibPageNo == 0) {
+            this->bufMgr->unPinPage(file, currentPageNum, false);
+            throw NoSuchKeyFoundException();
+        } else {
+            this->bufMgr->unPinPage(file, currentPageNum, false);
+            currentPageNum = target->rightSibPageNo;
+            this->bufMgr->readPage(file, currentPageNum, currentPageData);
+            target = (LeafNodeInt *) currentPageData;
+        }
 
     }
 

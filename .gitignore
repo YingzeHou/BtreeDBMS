@@ -2,3 +2,8 @@
 /Doxyfile
 .idea
 /docs/
+*.o
+*.a
+/src/badgerdb_main
+/relA
+/relA.*
