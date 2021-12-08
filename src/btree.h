@@ -288,6 +288,11 @@ class BTreeIndex {
    */
   Operator highOp;
 
+  void insertNodeLeaf(LeafNodeInt *node, RIDKeyPair<int> entryInsertPair);
+
+  void insertNodeNonLeaf(NonLeafNodeInt *node, PageKeyPair<int> *entryInsertPair);
+
+  void insertEntryHelper(RIDKeyPair<int> entryInsertPair, PageKeyPair<int> *&entryPropPair, Page *currPage, PageId currPageNum, bool isLeafNode);
  public:
   /**
    * BTreeIndex Constructor.
