@@ -250,7 +250,7 @@ void BTreeIndex::insertEntryHelper(RIDKeyPair<int> entryInsertPair,
         entryPropPair = nullptr;
         bufMgr->unPinPage(file, currPageNum, isDirty);
       } else {
-        splitNodeNonLeaf(node, currPageNum, entryPropPair);
+        splitNonLeafNode(node, currPageNum, entryPropPair);
       }
     } else {
       bufMgr->unPinPage(file, currPageNum, isDirty);
@@ -264,7 +264,7 @@ void BTreeIndex::insertEntryHelper(RIDKeyPair<int> entryInsertPair,
       entryPropPair = nullptr;
       bufMgr->unPinPage(file, currPageNum, true);
     } else {
-      splitNodeLeaf(node, currPageNum, entryPropPair, entryInsertPair);
+      splitLeafNode(node, currPageNum, entryPropPair, entryInsertPair);
     }
   }
 }
@@ -295,11 +295,11 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid) {
   }
 }
 
-void BTreeIndex::splitLeafNode(LeafNodeInt *oldNode, PageId oldPageID, PageKeyPair *&pushUpPage, RIDKeyPair<int> insertRecord) {
+void BTreeIndex::splitLeafNode(LeafNodeInt *oldNode, PageId oldPageID, PageKeyPair<int> *&pushUpPage, RIDKeyPair<int> insertRecord) {
 	// allocate space for a new leaf node
 	Page *newPage;
 	PageId newPageID;
-	BufMgr->allocPage(file, newPageID, newPage);
+	bufMgr->allocPage(file, newPageID, newPage);
 	LeafNodeInt *newNode = (LeafNodeInt *)newPage;
 
 	// split the old node into 2 parts from index [0, mid] and [mid + 1, leafOccupancy - 1]
@@ -311,19 +311,18 @@ void BTreeIndex::splitLeafNode(LeafNodeInt *oldNode, PageId oldPageID, PageKeyPa
 		newNode->keyArray[index] = oldNode->keyArray[i];
 		oldNode->keyArray[i] = 0;
 		newNode->ridArray[index] = oldNode->ridArray[i];
-		oldNode->ridArray[i] = 0;
+		oldNode->ridArray[i].page_number = 0;
 		index++;
 	}
 
 	// insert the record to the appropriate part based on the key value
 	if (insertRecord.key < oldNode->keyArray[mid]) {
-		insertLeafNode(oldNode, insertRecord);
+		insertNodeLeaf(oldNode, insertRecord);
 	} else {
-		insertLeafNode(newNode, insertRecord);
+		insertNodeLeaf(newNode, insertRecord);
 	}
 
 	// update sibling relation after inserting
-	newNode->level = oldNode->level;
 	newNode->rightSibPageNo = oldNode->rightSibPageNo;
 	oldNode->rightSibPageNo = newPageID;
 
@@ -342,20 +341,19 @@ void BTreeIndex::splitLeafNode(LeafNodeInt *oldNode, PageId oldPageID, PageKeyPa
 	bufMgr->unPinPage(file, newPageID, true);
 }
 
-void BTreeIndex::splitNonLeafNode(LeafNodeInt *oldNode, PageId oldPageID, PageKeyPair *&pushUpPage) {
+void BTreeIndex::splitNonLeafNode(NonLeafNodeInt *oldNode, PageId oldPageID, PageKeyPair<int> *&pushUpPage) {
 	// allocate space for a new leaf node
 	Page *newPage;
 	PageId newPageID;
-	BufMgr->allocPage(file, newPageID, newPage);
-	LeafNodeInt *newNode = (LeafNodeInt *)newPage;
+	bufMgr->allocPage(file, newPageID, newPage);
+	NonLeafNodeInt *newNode = (NonLeafNodeInt *)newPage;
 
-	// split the old node into 2 parts from index [0, mid] and [mid + 1, leafOccupancy - 1]
-	int mid = leafOccupancy / 2 - 1;
-	if (leafOccupancy % 2 == 0 && insertRecord.key >= oldNode->keyArray[mid])
-		mid++; // e.g: keyArray={3, 6, 8}, initially mid = 0 which points to 3. insert 9 mid should be 1 to balance
+	int mid = nodeOccupancy / 2 - 1;
+	if (nodeOccupancy % 2 == 0 && pushUpPage->key >= oldNode->keyArray[mid])
+		mid++;
 	mid++; // for the non-leaf node, we make the left part larger by 1 because it's easier to delete key from the end of the left part and maintain structure
 	int index = 0;
-	for (int i = mid + 1; i < leafOccupancy; i++) {
+	for (int i = mid + 1; i < nodeOccupancy; i++) {
 		newNode->keyArray[index] = oldNode->keyArray[i];
 		oldNode->keyArray[i] = 0;
 		newNode->pageNoArray[index] = oldNode->pageNoArray[i];
@@ -365,16 +363,14 @@ void BTreeIndex::splitNonLeafNode(LeafNodeInt *oldNode, PageId oldPageID, PageKe
 
 
 	// insert the record to the appropriate part based on the key value
-	if (insertRecord.key < newNode->keyArray[0]) {
-		insertNonLeafNode(oldNode, insertRecord);
+	if (pushUpPage->key < newNode->keyArray[0]) {
+		insertNodeNonLeaf(oldNode, pushUpPage);
 	} else {
-		insertNonLeafNode(newNode, insertRecord);
+		insertNodeNonLeaf(newNode, pushUpPage);
 	}
 
 	// update sibling relation after inserting
 	newNode->level = oldNode->level;
-	newNode->rightSibPageNo = oldNode->rightSibPageNo;
-	oldNode->rightSibPageNo = newPageID;
 
 	// copy the middle key value to the pushUpPage
 	PageKeyPair<int> middleRecord;
@@ -398,7 +394,7 @@ void BTreeIndex::splitNonLeafNode(LeafNodeInt *oldNode, PageId oldPageID, PageKe
 void BTreeIndex::updateRoot(PageId oldRootID, PageKeyPair<int> *pushUpPage) {
 	// allocate space for the new root page
 	Page *newRoot;
-	PageID newRootID;
+	PageId newRootID;
 	bufMgr->allocPage(file, newRootID, newRoot);
 
 	// retrive and update the old meta page

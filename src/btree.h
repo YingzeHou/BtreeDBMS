@@ -302,6 +302,14 @@ class BTreeIndex {
                          PageKeyPair<int>*& entryPropPair, Page* currPage,
                          PageId currPageNum, bool isLeafNode);
 
+  void splitLeafNode(LeafNodeInt *oldNode, PageId oldPageID, PageKeyPair<int> *&pushUpPage, RIDKeyPair<int> insertRecord);
+
+  void splitNonLeafNode(NonLeafNodeInt *oldNode, PageId oldPageID, PageKeyPair<int> *&pushUpPage);
+
+  void updateRoot(PageId oldRootID, PageKeyPair<int> *pushUpPage);
+
+
+
  public:
   /**
    * BTreeIndex Constructor.
