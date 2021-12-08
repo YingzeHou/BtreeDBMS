@@ -392,7 +392,7 @@ void BTreeIndex::splitNonLeafNode(LeafNodeInt *oldNode, PageId oldPageID, PageKe
 
 	// unpin
 	bufMgr->unPinPage(file, oldPageID, true);
-	bufMgr->unPinPage(file, newPageID, true);	
+	bufMgr->unPinPage(file, newPageID, true);
 }
 
 void BTreeIndex::updateRoot(PageId oldRootID, PageKeyPair<int> *pushUpPage) {
@@ -469,7 +469,7 @@ void BTreeIndex::startScan(const void *lowValParm, const Operator lowOpParm,
   bufMgr->readPage(this->file, this->currentPageNum, this->currentPageData);
   LeafNodeInt *target;
   if (this->initial != currentPageNum) {  // root not leaf
-    auto *current = (NonLeafNodeInt *)this->currentPageData;
+    auto *current = reinterpret_cast<NonLeafNodeInt *>(this->currentPageData);
     bool foundLeaf = false;
     while (true) {
       if (current->level == 1) {  // Leaf in next level
@@ -491,15 +491,15 @@ void BTreeIndex::startScan(const void *lowValParm, const Operator lowOpParm,
 
       if (foundLeaf) {  // if current node is one level above leaf, next node is
                         // leaf
-        target = (LeafNodeInt *)currentPageData;
+        target = reinterpret_cast<LeafNodeInt *>(currentPageData);
         break;
       } else {  // if current node not one level above leaf, next node is
                 // non-leaf, continue to traverse
-        current = (NonLeafNodeInt *)this->currentPageData;
+        current = reinterpret_cast<NonLeafNodeInt *>(this->currentPageData);
       }
     }
   } else {  // root is leaf
-    target = (LeafNodeInt *)this->currentPageData;
+    target = reinterpret_cast<LeafNodeInt *>(this->currentPageData);
   }
   if (target->ridArray[0].page_number == 0) {
     bufMgr->unPinPage(file, currentPageNum, false);
@@ -531,7 +531,7 @@ void BTreeIndex::startScan(const void *lowValParm, const Operator lowOpParm,
     this->bufMgr->unPinPage(file, currentPageNum, false);
     currentPageNum = target->rightSibPageNo;
     this->bufMgr->readPage(file, currentPageNum, currentPageData);
-    target = (LeafNodeInt *)currentPageData;
+    target = reinterpret_cast<LeafNodeInt *>(currentPageData);
   }
 }
 
@@ -555,7 +555,7 @@ void BTreeIndex::scanNext(RecordId &outRid) {
   if (!scanExecuting) {  // not started
     throw ScanNotInitializedException();
   }
-  LeafNodeInt *current = (LeafNodeInt *)this->currentPageData;
+  LeafNodeInt *current = reinterpret_cast<LeafNodeInt *>(this->currentPageData);
   if (current->ridArray[nextEntry].page_number == 0 ||
       nextEntry == this->leafOccupancy - 1) {
     // Unpin page and read papge
@@ -570,7 +570,7 @@ void BTreeIndex::scanNext(RecordId &outRid) {
     bufMgr->readPage(this->file, this->currentPageNum, this->currentPageData);
 
     // get current page
-    current = (LeafNodeInt *)this->currentPageData;
+    current = reinterpret_cast<LeafNodeInt *>(this->currentPageData);
     nextEntry = 0;
   }
 

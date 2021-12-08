@@ -6,3 +6,5 @@
 /relA
 /relA.*
 .DS_Store
+*.a
+*.o
