@@ -293,22 +293,70 @@ class BTreeIndex {
    */
   Operator highOp;
 
+  /**
+   * Inserts the pair into a given node that is a leaf node
+   * 
+   * @param node is a given leaf node
+   * @param entryInsertPair is the entry pair to be inserted
+   */
   void insertNodeLeaf(LeafNodeInt* node, RIDKeyPair<int> entryInsertPair);
 
+  /**
+   * Inserts the pair into a given node that is a non leaf node
+   * 
+   * @param node is a given non leaf node
+   * @param entryInsertPair is the entry pair to be inserted
+   */
   void insertNodeNonLeaf(NonLeafNodeInt* node,
                          PageKeyPair<int>* entryInsertPair);
 
+  /**
+   * Recursive helper function to insert an entry into the B+ tree
+   * 
+   * @param entryInsertPair is the entry pair to be inserted for leaf nodes
+   * @param entryPropPair is the entry pair to be inserted for non leaf nodes
+   * @param currPage the current page during the recusive calls
+   * @param currPageNum the current page number during the recusive calls
+   * @param isLeafNode whether inserting for leaf nodes or non leaf nodes
+   */
   void insertEntryHelper(RIDKeyPair<int> entryInsertPair,
                          PageKeyPair<int>*& entryPropPair, Page* currPage,
                          PageId currPageNum, bool isLeafNode);
 
+  /**
+   * Splits a leaf node, given that the node is already full.
+   * Inserts the record properly and propagate changes in siblings.
+   * Copy the middle key value to the pushed up page
+   * 
+   * @param oldNode is leaf node to be splitted
+   * @param oldPageID is page id for the old leaf node
+   * @param pushUpPage the page storing the middle record to be pushed up
+   * @param insertRecord is the entry pair to be inserted
+   */
   void splitLeafNode(LeafNodeInt* oldNode, PageId oldPageID,
                      PageKeyPair<int>*& pushUpPage,
                      RIDKeyPair<int> insertRecord);
 
+  /**
+   * Splits a non leaf node, given that the node is already full.
+   * Inserts the record properly and propagate changes in siblings.
+   * Copy the middle key value to the pushed up page
+   * 
+   * @param oldNode is non leaf node to be splitted
+   * @param oldPageID is page id for the old non leaf node
+   * @param pushUpPage the page storing the middle record to be pushed up
+   * @param insertRecord is the entry pair to be inserted
+   */
   void splitNonLeafNode(NonLeafNodeInt* oldNode, PageId oldPageID,
                         PageKeyPair<int>*& pushUpPage);
 
+  /**
+   * Retrieves the old root node. 
+   * Updates it with the new root node of the B+ tree
+   * 
+   * @param oldRootID is page id for the old root node
+   * @param pushUpPage the page storing the middle record to be pushed up
+   */
   void updateRoot(PageId oldRootID, PageKeyPair<int>* pushUpPage);
 
  public:

@@ -137,33 +137,22 @@ BTreeIndex::~BTreeIndex() {
 
 void BTreeIndex::insertNodeLeaf(LeafNodeInt *node,
                                 RIDKeyPair<int> entryInsertPair) {
-  // for leaf node pages that are empty
-  if (node->ridArray[0].page_number == 0) {
-    node->ridArray[0] = entryInsertPair.rid;
-    node->keyArray[0] = entryInsertPair.key;
-  } else {
-    // for leaf node pages that are not empty
-    int idx = 0;
-    for (int i = leafOccupancy - 1; i >= 0; --i) {
-      if (node->ridArray[i].page_number != 0) {
-        idx = i;
-        break;
-      }
-    }
+  // for leaf node pages that are not empty
+  if (node->ridArray[0].page_number != 0) {
+    int i = leafOccupancy - 1;
+    for (; i >= 0 && node->ridArray[i].page_number == 0; --i) {}
     // copy and move the record id and key arrays
-    for (int i = idx; i >= 0; --i) {
-      if (node->keyArray[i] <= entryInsertPair.key) {
-        idx = i;
-        break;
-      } else {
-        node->ridArray[i + 1] = node->ridArray[i];
-        node->keyArray[i + 1] = node->keyArray[i];
-        idx = i;
-      }
+    for (; i >= 0 && node->keyArray[i] > entryInsertPair.key; --i) {
+      node->ridArray[i + 1] = node->ridArray[i];
+      node->keyArray[i + 1] = node->keyArray[i];
     }
     // finally add the entry pair to be inserted
-    node->ridArray[idx + 1] = entryInsertPair.rid;
-    node->keyArray[idx + 1] = entryInsertPair.key;
+    node->ridArray[i + 1] = entryInsertPair.rid;
+    node->keyArray[i + 1] = entryInsertPair.key;
+  } else {
+    // simple case: for leaf node pages that are empty
+    node->ridArray[0] = entryInsertPair.rid;
+    node->keyArray[0] = entryInsertPair.key;
   }
 }
 
@@ -173,26 +162,16 @@ void BTreeIndex::insertNodeLeaf(LeafNodeInt *node,
 
 void BTreeIndex::insertNodeNonLeaf(NonLeafNodeInt *node,
                                    PageKeyPair<int> *entryInsertPair) {
-  int idx = 0;
-  for (int i = nodeOccupancy; i >= 0; --i) {
-    if (node->pageNoArray[i] != 0) {
-      idx = i;
-      break;
-    }
-  }
-  for (int i = idx; i > 0; --i) {
-    if (node->keyArray[i - 1] <= entryInsertPair->key) {
-      idx = i;
-      break;
-    } else {
-      node->keyArray[i] = node->keyArray[i - 1];
-      node->pageNoArray[i] = node->pageNoArray[i - 1];
-      idx = i;
-    }
+  // similar approach to inserting a leaf node
+  int i = nodeOccupancy;
+  for (; i >= 0 && node->pageNoArray[i] == 0; --i) {}
+  for (; i > 0 && node->keyArray[i - 1] > entryInsertPair->key; --i) {
+    node->keyArray[i] = node->keyArray[i - 1];
+    node->pageNoArray[i + 1] = node->pageNoArray[i];
   }
   // finally add the entry pair to be inserted
-  node->keyArray[idx] = entryInsertPair->key;
-  node->pageNoArray[idx + 1] = entryInsertPair->pageNo;
+  node->keyArray[i] = entryInsertPair->key;
+  node->pageNoArray[i + 1] = entryInsertPair->pageNo;
 }
 
 // -----------------------------------------------------------------------------
@@ -206,24 +185,13 @@ void BTreeIndex::insertEntryHelper(RIDKeyPair<int> entryInsertPair,
   // when the current code is a non-leaf node
   if (!isLeafNode) {
     NonLeafNodeInt *node = (NonLeafNodeInt *)(currPage);
-    int insertIndex = 0;
-    int keysSize = nodeOccupancy;
-    // search from the right to find the insert position
-    for (int i = keysSize; i >= 0; --i) {
-      if (node->pageNoArray[i] != 0) {
-        insertIndex = i;
-        break;
-      }
-    }
-    for (int i = insertIndex; i >= 1; --i) {
-      if (node->keyArray[i - 1] < entryInsertPair.key) {
-        insertIndex = i;
-        break;
-      }
-    }
+    // find the index of the next child to insert
+    int i = nodeOccupancy;
+    for (; i >= 0 && node->pageNoArray[i] == 0; --i) {}
+    for (; i > 0 && node->keyArray[i - 1] >= entryInsertPair.key; --i) {}
 
-    // recusively call the helper on the child node
-    PageId childPageNo = node->pageNoArray[insertIndex];
+    // recusively call the helper function on the child node
+    PageId childPageNo = node->pageNoArray[i];
     Page *childPage = nullptr;
     bufMgr->readPage(file, childPageNo, childPage);
     bool isChildLeafNode = node->level != 0;
@@ -240,6 +208,7 @@ void BTreeIndex::insertEntryHelper(RIDKeyPair<int> entryInsertPair,
         entryPropPair = nullptr;
         bufMgr->unPinPage(file, currPageNum, isDirty);
       } else {
+        // simple case: if full, directly split the node
         splitNonLeafNode(node, currPageNum, entryPropPair);
       }
     } else {
@@ -254,6 +223,7 @@ void BTreeIndex::insertEntryHelper(RIDKeyPair<int> entryInsertPair,
       entryPropPair = nullptr;
       bufMgr->unPinPage(file, currPageNum, true);
     } else {
+      // simple case: if full, directly split the node
       splitLeafNode(node, currPageNum, entryPropPair, entryInsertPair);
     }
   }
@@ -274,12 +244,13 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid) {
   // read the root page node
   Page *root = nullptr;
   bufMgr->readPage(file, rootPageNum, root);
-  bufMgr->unPinPage(file, rootPageNum, false);
 
-  if (rootPageNum != 0) {
+  if (rootPageNum != initial) {
+    // for the non leaf nodes
     insertEntryHelper(entryInsertPair, entryPropPair, root, rootPageNum,
                       isLeafNode);
   } else {
+    // for the leaf nodes
     insertEntryHelper(entryInsertPair, entryPropPair, root, rootPageNum,
                       !isLeafNode);
   }
