@@ -302,13 +302,14 @@ class BTreeIndex {
                          PageKeyPair<int>*& entryPropPair, Page* currPage,
                          PageId currPageNum, bool isLeafNode);
 
-  void splitLeafNode(LeafNodeInt *oldNode, PageId oldPageID, PageKeyPair<int> *&pushUpPage, RIDKeyPair<int> insertRecord);
+  void splitLeafNode(LeafNodeInt* oldNode, PageId oldPageID,
+                     PageKeyPair<int>*& pushUpPage,
+                     RIDKeyPair<int> insertRecord);
 
-  void splitNonLeafNode(NonLeafNodeInt *oldNode, PageId oldPageID, PageKeyPair<int> *&pushUpPage);
+  void splitNonLeafNode(NonLeafNodeInt* oldNode, PageId oldPageID,
+                        PageKeyPair<int>*& pushUpPage);
 
-  void updateRoot(PageId oldRootID, PageKeyPair<int> *pushUpPage);
-
-
+  void updateRoot(PageId oldRootID, PageKeyPair<int>* pushUpPage);
 
  public:
   /**
@@ -321,10 +322,10 @@ class BTreeIndex {
    * @param outIndexName        Return the name of index file.
    * @param bufMgrIn						Buffer Manager
    * Instance
-   * @param attrByteOffset			Offset of attribute, over which index
-   * is to be built, in the record
-   * @param attrType						Datatype of attribute over which
-   * index is built
+   * @param attrByteOffset			Offset of attribute, over which
+   * index is to be built, in the record
+   * @param attrType						Datatype of attribute over
+   * which index is built
    * @throws  BadIndexInfoException     If the index file already exists for the
    * corresponding attribute, but values in metapage(relationName, attribute
    * byte offset, attribute type etc.) do not match with values received through

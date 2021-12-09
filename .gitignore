@@ -6,5 +6,6 @@
 /relA
 /relA.*
 .DS_Store
-*.a
-*.o
+src/lib/*.a
+src/obj/*.o
+src/obj/exceptions/*.o
