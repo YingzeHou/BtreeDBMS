@@ -76,6 +76,17 @@ void indexTests();
 void test1();
 void test2();
 void test3();
+
+// additional tests
+void createRelationForwardMiddle();
+void createRelationBackwardMiddle();
+void createRelationForwardRange();
+void createRelationBackwardRange();
+void test4();
+void test5();
+void test6();
+void test7();
+
 void errorTests();
 void deleteRelation();
 
@@ -131,6 +142,13 @@ int main(int argc, char **argv) {
   test1();
   test2();
   test3();
+
+  // additional test
+  test4();
+  test5();
+  test6();
+  test7();
+
   errorTests();
 
   delete bufMgr;
@@ -167,6 +185,89 @@ void test3() {
   indexTests();
   deleteRelation();
 }
+
+// -----------------------------------------------------------------------------
+// Additional Tests
+// -----------------------------------------------------------------------------
+
+void test4() {
+  // Create a relation with tuples valued 0 to relationSize in forward order but
+  // only insert until the middle and perform index tests
+  std::cout << "--------------------" << std::endl;
+  std::cout << "createRelationForwardMiddle" << std::endl;
+  createRelationForwardMiddle();
+
+  std::cout << "Create a B+ Tree index on the integer field" << std::endl;
+  BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple,i), INTEGER);
+	checkPassFail(intScan(&index, 25, GT, 40, LT), 14)
+	checkPassFail(intScan(&index, 20, GTE, 35, LTE), 16)
+	checkPassFail(intScan(&index, -3, GT, 3, LT), 3)
+	checkPassFail(intScan(&index, 996, GT, 1001, LT), 4)
+	checkPassFail(intScan(&index, 0, GT, 1, LT), 0)
+	checkPassFail(intScan(&index, 300, GT, 400, LT), 99)
+
+  deleteRelation();
+}
+
+void test5() {
+  // Create a relation with tuples valued 0 to relationSize in backward order but
+  // only insert from the middle and perform index tests
+  std::cout << "--------------------" << std::endl;
+  std::cout << "createRelationForwardMiddle" << std::endl;
+  createRelationBackwardMiddle();
+
+  std::cout << "Create a B+ Tree index on the integer field" << std::endl;
+  BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple,i), INTEGER);
+	checkPassFail(intScan(&index, 25, GT, 40, LT), 14)
+	checkPassFail(intScan(&index, 20, GTE, 35, LTE), 16)
+	checkPassFail(intScan(&index, -3, GT, 3, LT), 3)
+	checkPassFail(intScan(&index, 996, GT, 1001, LT), 4)
+	checkPassFail(intScan(&index, 0, GT, 1, LT), 0)
+	checkPassFail(intScan(&index, 300, GT, 400, LT), 99)
+
+  deleteRelation();
+}
+
+
+void test6() {
+  // Create a relation with tuples valued 0 to relationSize in backward order but
+  // only insert from the middle and perform index tests
+  std::cout << "--------------------" << std::endl;
+  std::cout << "createRelationForwardMiddle" << std::endl;
+  createRelationForwardRange();
+
+  std::cout << "Create a B+ Tree index on the integer field" << std::endl;
+  BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple,i), INTEGER);
+	checkPassFail(intScan(&index, 25, GT, 40, LT), 14)
+	checkPassFail(intScan(&index, 20, GTE, 35, LTE), 16)
+	checkPassFail(intScan(&index, -3, GT, 3, LT), 3)
+	checkPassFail(intScan(&index, 996, GT, 1001, LT), 4)
+	checkPassFail(intScan(&index, 0, GT, 1, LT), 0)
+	checkPassFail(intScan(&index, 300, GT, 400, LT), 99)
+
+  deleteRelation();
+}
+
+
+void test7() {
+  // Create a relation with tuples valued 0 to relationSize in backward order but
+  // only insert from the middle and perform index tests
+  std::cout << "--------------------" << std::endl;
+  std::cout << "createRelationForwardMiddle" << std::endl;
+  createRelationBackwardRange();
+
+  std::cout << "Create a B+ Tree index on the integer field" << std::endl;
+  BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple,i), INTEGER);
+	checkPassFail(intScan(&index, 25, GT, 40, LT), 14)
+	checkPassFail(intScan(&index, 20, GTE, 35, LTE), 16)
+	checkPassFail(intScan(&index, -3, GT, 3, LT), 3)
+	checkPassFail(intScan(&index, 996, GT, 1001, LT), 4)
+	checkPassFail(intScan(&index, 0, GT, 1, LT), 0)
+	checkPassFail(intScan(&index, 300, GT, 400, LT), 99)
+
+  deleteRelation();
+}
+
 
 // -----------------------------------------------------------------------------
 // createRelationForward
@@ -301,6 +402,175 @@ void createRelationRandom() {
 
   file1->writePage(new_page_number, new_page);
 }
+
+
+// -----------------------------------------------------------------------------
+// createRelationForwardMiddle
+// -----------------------------------------------------------------------------
+
+void createRelationForwardMiddle() {
+  std::vector<RecordId> ridVec;
+  // destroy any old copies of relation file
+  try {
+    File::remove(relationName);
+  } catch (const FileNotFoundException &e) {
+  }
+
+  file1 = new PageFile(relationName, true);
+
+  // initialize all of record1.s to keep purify happy
+  memset(record1.s, ' ', sizeof(record1.s));
+  PageId new_page_number;
+  Page new_page = file1->allocatePage(new_page_number);
+
+  // Insert a bunch of tuples into the relation.
+  int size = relationSize / 2;
+  for (int i = 0; i < size; ++i) {
+    sprintf(record1.s, "%05d string record", i);
+    record1.i = i;
+    record1.d = (double)i;
+    std::string new_data(reinterpret_cast<char *>(&record1), sizeof(record1));
+
+    while (1) {
+      try {
+        new_page.insertRecord(new_data);
+        break;
+      } catch (const InsufficientSpaceException &e) {
+        file1->writePage(new_page_number, new_page);
+        new_page = file1->allocatePage(new_page_number);
+      }
+    }
+  }
+
+  file1->writePage(new_page_number, new_page);
+}
+
+
+// -----------------------------------------------------------------------------
+// createRelationBackwardMiddle
+// -----------------------------------------------------------------------------
+
+void createRelationBackwardMiddle() {
+  // destroy any old copies of relation file
+  try {
+    File::remove(relationName);
+  } catch (const FileNotFoundException &e) {
+  }
+  file1 = new PageFile(relationName, true);
+
+  // initialize all of record1.s to keep purify happy
+  memset(record1.s, ' ', sizeof(record1.s));
+  PageId new_page_number;
+  Page new_page = file1->allocatePage(new_page_number);
+
+  // Insert a bunch of tuples into the relation.
+  int size = relationSize / 2;
+  for (int i = size - 1; i >= 0; i--) {
+    sprintf(record1.s, "%05d string record", i);
+    record1.i = i;
+    record1.d = i;
+
+    std::string new_data(reinterpret_cast<char *>(&record1), sizeof(RECORD));
+
+    while (1) {
+      try {
+        new_page.insertRecord(new_data);
+        break;
+      } catch (const InsufficientSpaceException &e) {
+        file1->writePage(new_page_number, new_page);
+        new_page = file1->allocatePage(new_page_number);
+      }
+    }
+  }
+
+  file1->writePage(new_page_number, new_page);
+}
+
+
+// -----------------------------------------------------------------------------
+// createRelationForwardRange
+// -----------------------------------------------------------------------------
+
+void createRelationForwardRange() {
+  std::vector<RecordId> ridVec;
+  // destroy any old copies of relation file
+  try {
+    File::remove(relationName);
+  } catch (const FileNotFoundException &e) {
+  }
+
+  file1 = new PageFile(relationName, true);
+
+  // initialize all of record1.s to keep purify happy
+  memset(record1.s, ' ', sizeof(record1.s));
+  PageId new_page_number;
+  Page new_page = file1->allocatePage(new_page_number);
+
+  // Insert a bunch of tuples into the relation.
+  int left = (int) (relationSize * 0.1);
+  int right = (int) (relationSize * 0.9);
+  for (int i = left; i < right; i++) {
+    sprintf(record1.s, "%05d string record", i);
+    record1.i = i;
+    record1.d = (double)i;
+    std::string new_data(reinterpret_cast<char *>(&record1), sizeof(record1));
+
+    while (1) {
+      try {
+        new_page.insertRecord(new_data);
+        break;
+      } catch (const InsufficientSpaceException &e) {
+        file1->writePage(new_page_number, new_page);
+        new_page = file1->allocatePage(new_page_number);
+      }
+    }
+  }
+
+  file1->writePage(new_page_number, new_page);
+}
+
+
+// -----------------------------------------------------------------------------
+// createRelationBackwardMiddle
+// -----------------------------------------------------------------------------
+
+void createRelationBackwardRange() {
+  // destroy any old copies of relation file
+  try {
+    File::remove(relationName);
+  } catch (const FileNotFoundException &e) {
+  }
+  file1 = new PageFile(relationName, true);
+
+  // initialize all of record1.s to keep purify happy
+  memset(record1.s, ' ', sizeof(record1.s));
+  PageId new_page_number;
+  Page new_page = file1->allocatePage(new_page_number);
+
+  // Insert a bunch of tuples into the relation.
+  int right = (int) (relationSize * 0.8);
+  int left = (int) (relationSize * 0.2);
+  for (int i = right; i >= left; i--) {
+    sprintf(record1.s, "%05d string record", i);
+    record1.i = i;
+    record1.d = i;
+
+    std::string new_data(reinterpret_cast<char *>(&record1), sizeof(RECORD));
+
+    while (1) {
+      try {
+        new_page.insertRecord(new_data);
+        break;
+      } catch (const InsufficientSpaceException &e) {
+        file1->writePage(new_page_number, new_page);
+        new_page = file1->allocatePage(new_page_number);
+      }
+    }
+  }
+
+  file1->writePage(new_page_number, new_page);
+}
+
 
 // -----------------------------------------------------------------------------
 // indexTests
