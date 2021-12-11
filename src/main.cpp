@@ -213,7 +213,7 @@ void test5() {
   // Create a relation with tuples valued 0 to relationSize in backward order but
   // only insert from the middle and perform index tests
   std::cout << "--------------------" << std::endl;
-  std::cout << "createRelationForwardMiddle" << std::endl;
+  std::cout << "createRelationBackwardMiddle" << std::endl;
   createRelationBackwardMiddle();
 
   std::cout << "Create a B+ Tree index on the integer field" << std::endl;
@@ -230,10 +230,9 @@ void test5() {
 
 
 void test6() {
-  // Create a relation with tuples valued 0 to relationSize in backward order but
-  // only insert from the middle and perform index tests
+  // Create a relation with tuples valued in a range by forward order
   std::cout << "--------------------" << std::endl;
-  std::cout << "createRelationForwardMiddle" << std::endl;
+  std::cout << "createRelationForwardRange" << std::endl;
   createRelationForwardRange();
 
   std::cout << "Create a B+ Tree index on the integer field" << std::endl;
@@ -250,10 +249,9 @@ void test6() {
 
 
 void test7() {
-  // Create a relation with tuples valued 0 to relationSize in backward order but
-  // only insert from the middle and perform index tests
+  // Create a relation with tuples valued in a range by backward order
   std::cout << "--------------------" << std::endl;
-  std::cout << "createRelationForwardMiddle" << std::endl;
+  std::cout << "createRelationBackwardRange" << std::endl;
   createRelationBackwardRange();
 
   std::cout << "Create a B+ Tree index on the integer field" << std::endl;
@@ -597,6 +595,181 @@ void intTests() {
   checkPassFail(intScan(&index, 25, GT, 40, LT), 14)
       checkPassFail(intScan(&index, 20, GTE, 35, LTE), 16)
           checkPassFail(intScan(&index, -3, GT, 3, LT), 3)
+              checkPassFail(intScan(&index, 996, GT, 1001, LT), 4)
+                  checkPassFail(intScan(&index, 0, GT, 1, LT), 0) checkPassFail(
+                      intScan(&index, 300, GT, 400, LT), 99)
+                      checkPassFail(intScan(&index, 3000, GTE, 4000, LT), 1000)
+}
+
+int intScan(BTreeIndex *index, int lowVal, Operator lowOp, int highVal,
+            Operator highOp) {
+  RecordId scanRid;
+  Page *curPage;
+
+  std::cout << "Scan for ";
+  if (lowOp == GT) {
+    std::cout << "(";
+  } else {
+    std::cout << "[";
+  }
+  std::cout << lowVal << "," << highVal;
+  if (highOp == LT) {
+    std::cout << ")";
+  } else {
+    std::cout << "]";
+  }
+  std::cout << std::endl;
+
+  int numResults = 0;
+
+  try {
+    index->startScan(&lowVal, lowOp, &highVal, highOp);
+  } catch (const NoSuchKeyFoundException &e) {
+    std::cout << "No Key Found satisfying the scan criteria." << std::endl;
+    return 0;
+  }
+
+  while (1) {
+    try {
+      index->scanNext(scanRid);
+      bufMgr->readPage(file1, scanRid.page_number, curPage);
+      RECORD myRec = *(
+          reinterpret_cast<const RECORD *>(curPage->getRecord(scanRid).data()));
+      bufMgr->unPinPage(file1, scanRid.page_number, false);
+
+      if (numResults < 5) {
+        std::cout << "at:" << scanRid.page_number << "," << scanRid.slot_number;
+        std::cout << " -->:" << myRec.i << ":" << myRec.d << ":" << myRec.s
+                  << ":" << std::endl;
+      } else if (numResults == 5) {
+        std::cout << "..." << std::endl;
+      }
+    } catch (const IndexScanCompletedException &e) {
+      break;
+    }
+
+    numResults++;
+  }
+
+  if (numResults >= 5) {
+    std::cout << "Number of results: " << numResults << std::endl;
+  }
+  index->endScan();
+  std::cout << std::endl;
+
+  return numResults;
+}
+
+// -----------------------------------------------------------------------------
+// errorTests
+// -----------------------------------------------------------------------------
+
+void errorTests() {
+  {
+    std::cout << "Error handling tests" << std::endl;
+    std::cout << "--------------------" << std::endl;
+    // Given error test
+
+    try {
+      File::remove(relationName);
+    } catch (const FileNotFoundException &e) {
+    }
+
+    file1 = new PageFile(relationName, true);
+
+    // initialize all of record1.s to keep purify happy
+    memset(record1.s, ' ', sizeof(record1.s));
+    PageId new_page_number;
+    Page new_page = file1->allocatePage(new_page_number);
+
+    // Insert a bunch of tuples into the relation.
+    for (int i = 0; i < 10; i++) {
+      sprintf(record1.s, "%05d string record", i);
+      record1.i = i;
+      record1.d = (double)i;
+      std::string new_data(reinterpret_cast<char *>(&record1), sizeof(record1));
+
+      while (1) {
+        try {
+          new_page.insertRecord(new_data);
+          break;
+        } catch (const InsufficientSpaceException &e) {
+          file1->writePage(new_page_number, new_page);
+          new_page = file1->allocatePage(new_page_number);
+        }
+      }
+    }
+
+    file1->writePage(new_page_number, new_page);
+
+    BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple, i),
+                     INTEGER);
+
+    int int2 = 2;
+    int int5 = 5;
+
+    // Scan Tests
+    std::cout << "Call endScan before startScan" << std::endl;
+    try {
+      index.endScan();
+      std::cout << "ScanNotInitialized Test 1 Failed." << std::endl;
+    } catch (const ScanNotInitializedException &e) {
+      std::cout << "ScanNotInitialized Test 1 Passed." << std::endl;
+    }
+
+    std::cout << "Call scanNext before startScan" << std::endl;
+    try {
+      RecordId foo;
+      index.scanNext(foo);
+      std::cout << "ScanNotInitialized Test 2 Failed." << std::endl;
+    } catch (const ScanNotInitializedException &e) {
+      std::cout << "ScanNotInitialized Test 2 Passed." << std::endl;
+    }
+
+    std::cout << "Scan with bad lowOp" << std::endl;
+    try {
+      index.startScan(&int2, LTE, &int5, LTE);
+      std::cout << "BadOpcodesException Test 1 Failed." << std::endl;
+    } catch (const BadOpcodesException &e) {
+      std::cout << "BadOpcodesException Test 1 Passed." << std::endl;
+    }
+
+    std::cout << "Scan with bad highOp" << std::endl;
+    try {
+      index.startScan(&int2, GTE, &int5, GTE);
+      std::cout << "BadOpcodesException Test 2 Failed." << std::endl;
+    } catch (const BadOpcodesException &e) {
+      std::cout << "BadOpcodesException Test 2 Passed." << std::endl;
+    }
+
+    std::cout << "Scan with bad range" << std::endl;
+    try {
+      index.startScan(&int5, GTE, &int2, LTE);
+      std::cout << "BadScanrangeException Test 1 Failed." << std::endl;
+    } catch (const BadScanrangeException &e) {
+      std::cout << "BadScanrangeException Test 1 Passed." << std::endl;
+    }
+
+    deleteRelation();
+  }
+
+  try {
+    File::remove(intIndexName);
+  } catch (const FileNotFoundException &e) {
+  }
+}
+
+void deleteRelation() {
+  if (file1) {
+    bufMgr->flushFile(file1);
+    delete file1;
+    file1 = NULL;
+  }
+  try {
+    File::remove(relationName);
+  } catch (const FileNotFoundException &e) {
+  }
+}         checkPassFail(intScan(&index, -3, GT, 3, LT), 3)
               checkPassFail(intScan(&index, 996, GT, 1001, LT), 4)
                   checkPassFail(intScan(&index, 0, GT, 1, LT), 0) checkPassFail(
                       intScan(&index, 300, GT, 400, LT), 99)
